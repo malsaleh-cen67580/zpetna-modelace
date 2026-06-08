@@ -498,10 +498,7 @@
         ],
       };
 
-      // Benchmark series (simulated S&P 500 + monthly inflation)
-      const BENCHMARK_SP500 = HISTORICAL_RETURNS.stocks.map(
-        (v) => v * 1.05 + 0.05
-      );
+      // Inflation benchmark series (monthly)
       // prettier-ignore
       const BENCHMARK_INFLATION = [
         0.2, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4,
@@ -560,21 +557,17 @@
         const monthly = weightedMonthlyReturns(allocation);
         const normalizedContribution = Math.max(0, Number(monthlyContribution) || 0);
         const portfolio = [];
-        const benchmark = [];
         const inflation = [];
         const contributed = [];
         let portfolioValue = initialInvestment;
-        let benchmarkValue = initialInvestment;
         let inflationValue = initialInvestment;
         let totalContributed = initialInvestment;
 
         for (let i = 0; i < monthly.length; i++) {
           portfolioValue = portfolioValue * (1 + monthly[i] / 100) + normalizedContribution;
-          benchmarkValue = benchmarkValue * (1 + BENCHMARK_SP500[i] / 100) + normalizedContribution;
           inflationValue = inflationValue * (1 - BENCHMARK_INFLATION[i] / 100) + normalizedContribution;
           totalContributed += normalizedContribution;
           portfolio.push(portfolioValue);
-          benchmark.push(benchmarkValue);
           inflation.push(inflationValue);
           contributed.push(totalContributed);
         }
@@ -582,7 +575,6 @@
         return TIMELINE.map((t, i) => ({
           date: t.label,
           portfolio: portfolio[i],
-          benchmark: benchmark[i],
           inflation: inflation[i],
           contributed: contributed[i],
           recurringContributed: normalizedContribution * (i + 1),
@@ -596,22 +588,21 @@
           return {
             ...row,
             portfolioPct: ((row.portfolio / base) - 1) * 100,
-            benchmarkPct: ((row.benchmark / base) - 1) * 100,
             inflationPct: ((row.inflation / base) - 1) * 100,
           };
         });
       }
       function annualisedReturn(start, end, months) {
-        if (start <= 0 || months <= 0) return 0;
+        if (start <= 0 || end <= 0 || months <= 0) return 0;
         const years = months / 12;
         return (Math.pow(end / start, 1 / years) - 1) * 100;
       }
       function stddev(values) {
-        if (!values.length) return 0;
+        if (values.length <= 1) return 0;
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
         const v =
           values.reduce((a, b) => a + (b - mean) * (b - mean), 0) /
-          values.length;
+          (values.length - 1);
         return Math.sqrt(v);
       }
       function computeStats(allocation, initialInvestment) {
@@ -780,7 +771,7 @@
           tagline:
             "Investiční řešení – 5 let a více, Rizikovost 4",
           riskLabel: "Dynamická strategie",
-          riskLevel: 5,
+          riskLevel: 4,
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 4",
           allocation: { bonds: 10, stocks: 75, alternatives: 15 },
           funds: [
@@ -2306,6 +2297,14 @@
       }
 
       function App() {
+        useEffect(() => {
+          const loader = document.getElementById("boot-loader");
+          if (loader) {
+            loader.style.opacity = "0";
+            setTimeout(() => loader.remove(), 400);
+          }
+        }, []);
+
         return (
           <InvestmentProvider>
             <Index />
@@ -2319,15 +2318,6 @@
       const rootEl = document.getElementById("root");
       ReactDOM.createRoot(rootEl).render(<App />);
 
-      // Hide boot loader once React has rendered
-      requestAnimationFrame(() => {
-        const loader = document.getElementById("boot-loader");
-        if (loader) {
-          loader.style.opacity = "0";
-          setTimeout(() => loader.remove(), 400);
-        }
-      });
     </script>
   </body>
 </html>
-
