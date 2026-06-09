@@ -498,10 +498,7 @@
         ],
       };
 
-      // Benchmark series (simulated S&P 500 + monthly inflation)
-      const BENCHMARK_SP500 = HISTORICAL_RETURNS.stocks.map(
-        (v) => v * 1.05 + 0.05
-      );
+      // Inflation benchmark series (monthly)
       // prettier-ignore
       const BENCHMARK_INFLATION = [
         0.2, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4,
@@ -560,21 +557,17 @@
         const monthly = weightedMonthlyReturns(allocation);
         const normalizedContribution = Math.max(0, Number(monthlyContribution) || 0);
         const portfolio = [];
-        const benchmark = [];
         const inflation = [];
         const contributed = [];
         let portfolioValue = initialInvestment;
-        let benchmarkValue = initialInvestment;
         let inflationValue = initialInvestment;
         let totalContributed = initialInvestment;
 
         for (let i = 0; i < monthly.length; i++) {
           portfolioValue = portfolioValue * (1 + monthly[i] / 100) + normalizedContribution;
-          benchmarkValue = benchmarkValue * (1 + BENCHMARK_SP500[i] / 100) + normalizedContribution;
           inflationValue = inflationValue * (1 - BENCHMARK_INFLATION[i] / 100) + normalizedContribution;
           totalContributed += normalizedContribution;
           portfolio.push(portfolioValue);
-          benchmark.push(benchmarkValue);
           inflation.push(inflationValue);
           contributed.push(totalContributed);
         }
@@ -582,7 +575,6 @@
         return TIMELINE.map((t, i) => ({
           date: t.label,
           portfolio: portfolio[i],
-          benchmark: benchmark[i],
           inflation: inflation[i],
           contributed: contributed[i],
           recurringContributed: normalizedContribution * (i + 1),
@@ -596,22 +588,21 @@
           return {
             ...row,
             portfolioPct: ((row.portfolio / base) - 1) * 100,
-            benchmarkPct: ((row.benchmark / base) - 1) * 100,
             inflationPct: ((row.inflation / base) - 1) * 100,
           };
         });
       }
       function annualisedReturn(start, end, months) {
-        if (start <= 0 || months <= 0) return 0;
+        if (start <= 0 || end <= 0 || months <= 0) return 0;
         const years = months / 12;
         return (Math.pow(end / start, 1 / years) - 1) * 100;
       }
       function stddev(values) {
-        if (!values.length) return 0;
+        if (values.length <= 1) return 0;
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
         const v =
           values.reduce((a, b) => a + (b - mean) * (b - mean), 0) /
-          values.length;
+          (values.length - 1);
         return Math.sqrt(v);
       }
       function computeStats(allocation, initialInvestment) {
@@ -718,11 +709,11 @@
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 1",
           allocation: { bonds: 90, stocks: 5, alternatives: 5 },
           funds: [
-            { name: "SPOROINVEST", weight: 20, sleeve: "Úroková složka" },
-            { name: "SPOROBOND", weight: 40, sleeve: "Úroková složka" },
-            { name: "Prémiový dluhopis EUROPE", weight: 30, sleeve: "Úroková složka" },
-            { name: "ERSTE STOCK VALUE CZK", weight: 5, sleeve: "Akciová složka" },
-            { name: "REICO NEMOVITOSTNÍ", weight: 5, sleeve: "Alternativní složka" },
+            { name: "Sporoinvest", weight: 20, sleeve: "Úroková složka" },
+            { name: "Sporobond", weight: 40, sleeve: "Úroková složka" },
+            { name: "Goldman Sachs Czech Crown Bond", weight: 30, sleeve: "Úroková složka" },
+            { name: "Erste Responsible Stock Global", weight: 5, sleeve: "Akciová složka" },
+            { name: "Reico ČS Nemovitostní", weight: 5, sleeve: "Alternativní složka" },
           ],
         },
         {
@@ -735,18 +726,18 @@
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 2",
           allocation: { bonds: 65, stocks: 20, alternatives: 15 },
           funds: [
-            { name: "SPOROINVEST", weight: 5, sleeve: "Úroková složka" },
-            { name: "SPOROBOND", weight: 30, sleeve: "Úroková složka" },
-            { name: "Prémiový dluhopis EUROPE", weight: 15, sleeve: "Úroková složka" },
-            { name: "ČS KORPORÁTNÍ DLUHOPISOVÝ", weight: 10, sleeve: "Úroková složka" },
+            { name: "Sporoinvest", weight: 5, sleeve: "Úroková složka" },
+            { name: "Sporobond", weight: 30, sleeve: "Úroková složka" },
+            { name: "Goldman Sachs Czech Crown Bond", weight: 15, sleeve: "Úroková složka" },
+            { name: "ČS korporátní dluhopisový", weight: 10, sleeve: "Úroková složka" },
             { name: "High Yield dluhopisový", weight: 5, sleeve: "Úroková složka" },
-            { name: "ERSTE STOCK VALUE", weight: 5, sleeve: "Akciová složka" },
-            { name: "TOP STOCKS", weight: 5, sleeve: "Akciová složka" },
-            { name: "STOCK SMALL CAPS", weight: 5, sleeve: "Akciová složka" },
-            { name: "ERSTE DIGITAL ASSETS CZK", weight: 5, sleeve: "Akciová složka" },
-            { name: "REICO NEMOVITOSTNÍ", weight: 5, sleeve: "Alternativní složka" },
-            { name: "REICO LONG LEASE", weight: 5, sleeve: "Alternativní složka" },
-            { name: "Erste Private Markets Evergreen ELTIF PR-CZK-H-acc", weight: 5, sleeve: "Alternativní složka" },
+            { name: "Erste Responsible Stock Global", weight: 5, sleeve: "Akciová složka" },
+            { name: "Top Stocks", weight: 5, sleeve: "Akciová složka" },
+            { name: "Stock Small Caps", weight: 5, sleeve: "Akciová složka" },
+            { name: "Fidelity Global Dividend", weight: 5, sleeve: "Akciová složka" },
+            { name: "Reico ČS Nemovitostní", weight: 5, sleeve: "Alternativní složka" },
+            { name: "Reico ČS Long lease", weight: 5, sleeve: "Alternativní složka" },
+            { name: "BNPP Flexi I Commodities", weight: 5, sleeve: "Alternativní složka" },
           ],
         },
         {
@@ -759,19 +750,19 @@
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 3",
           allocation: { bonds: 45, stocks: 40, alternatives: 15 },
           funds: [
-            { name: "SPOROBOND", weight: 20, sleeve: "Úroková složka" },
-            { name: "Prémiový dluhopis EUROPE", weight: 10, sleeve: "Úroková složka" },
-            { name: "ČS KORPORÁTNÍ DLUHOPISOVÝ", weight: 5, sleeve: "Úroková složka" },
+            { name: "Sporobond", weight: 20, sleeve: "Úroková složka" },
+            { name: "Goldman Sachs Czech Crown Bond", weight: 10, sleeve: "Úroková složka" },
+            { name: "ČS korporátní dluhopisový", weight: 5, sleeve: "Úroková složka" },
             { name: "High Yield dluhopisový", weight: 10, sleeve: "Úroková složka" },
-            { name: "ERSTE SECURITY INVEST CZK", weight: 5, sleeve: "Akciová složka" },
-            { name: "TOP STOCKS", weight: 5, sleeve: "Akciová složka" },
-            { name: "ERSTE STOCK VALUE", weight: 10, sleeve: "Akciová složka" },
-            { name: "STOCK SMALL CAPS", weight: 5, sleeve: "Akciová složka" },
-            { name: "Fidelity Funds - Global Dividend Fund", weight: 5, sleeve: "Akciová složka" },
-            { name: "ERSTE DIGITAL ASSETS CZK", weight: 5, sleeve: "Akciová složka" },
-            { name: "Erste Group Index-Zertifikat PX-TRnet Open End", weight: 5, sleeve: "Akciová složka" },
-            { name: "REICO LONG LEASE", weight: 5, sleeve: "Alternativní složka" },
-            { name: "Erste Private Markets Evergreen ELTIF PR-CZK-H-acc", weight: 10, sleeve: "Alternativní složka" },
+            { name: "Erste Security Invest", weight: 5, sleeve: "Akciová složka" },
+            { name: "Top Stocks", weight: 5, sleeve: "Akciová složka" },
+            { name: "Erste Responsible Stock Global", weight: 10, sleeve: "Akciová složka" },
+            { name: "Stock Small Caps", weight: 5, sleeve: "Akciová složka" },
+            { name: "Fidelity Global Dividend", weight: 5, sleeve: "Akciová složka" },
+            { name: "Erste Stock EM Global VT", weight: 5, sleeve: "Akciová složka" },
+            { name: "Goldman Sachs Central European Equity", weight: 5, sleeve: "Akciová složka" },
+            { name: "Reico ČS Long lease", weight: 5, sleeve: "Alternativní složka" },
+            { name: "BNPP Flexi I Commodities", weight: 10, sleeve: "Alternativní složka" },
           ],
         },
         {
@@ -780,21 +771,21 @@
           tagline:
             "Investiční řešení – 5 let a více, Rizikovost 4",
           riskLabel: "Dynamická strategie",
-          riskLevel: 5,
+          riskLevel: 4,
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 4",
           allocation: { bonds: 10, stocks: 75, alternatives: 15 },
           funds: [
-            { name: "SPOROBOND", weight: 5, sleeve: "Úroková složka" },
+            { name: "Sporobond", weight: 5, sleeve: "Úroková složka" },
             { name: "High Yield dluhopisový", weight: 5, sleeve: "Úroková složka" },
-            { name: "ERSTE SECURITY INVEST CZK", weight: 10, sleeve: "Akciová složka" },
-            { name: "TOP STOCKS", weight: 5, sleeve: "Akciová složka" },
-            { name: "ERSTE STOCK VALUE", weight: 15, sleeve: "Akciová složka" },
-            { name: "STOCK SMALL CAPS", weight: 20, sleeve: "Akciová složka" },
-            { name: "Fidelity Funds - Global Dividend Fund", weight: 10, sleeve: "Akciová složka" },
-            { name: "ERSTE DIGITAL ASSETS CZK", weight: 10, sleeve: "Akciová složka" },
-            { name: "Erste Group Index-Zertifikat PX-TRnet Open End", weight: 5, sleeve: "Akciová složka" },
-            { name: "REICO LONG LEASE", weight: 5, sleeve: "Alternativní složka" },
-            { name: "Erste Private Markets Evergreen ELTIF PR-CZK-H-acc", weight: 10, sleeve: "Alternativní složka" },
+            { name: "Erste Security Invest", weight: 10, sleeve: "Akciová složka" },
+            { name: "Top Stocks", weight: 5, sleeve: "Akciová složka" },
+            { name: "Erste Responsible Stock Global", weight: 15, sleeve: "Akciová složka" },
+            { name: "Stock Small Caps", weight: 20, sleeve: "Akciová složka" },
+            { name: "Fidelity Global Dividend", weight: 10, sleeve: "Akciová složka" },
+            { name: "Erste Stock EM Global VT", weight: 10, sleeve: "Akciová složka" },
+            { name: "Goldman Sachs Central European Equity", weight: 5, sleeve: "Akciová složka" },
+            { name: "Reico ČS Long lease", weight: 5, sleeve: "Alternativní složka" },
+            { name: "BNPP Flexi I Commodities", weight: 10, sleeve: "Alternativní složka" },
           ],
         },
       ];
@@ -816,100 +807,124 @@
         allocation: portfolio.allocation,
       }));
 
-      const ALL_FUNDS = [
-        { name: "SPOROINVEST", sleeve: "Úroková složka" },
-        { name: "SPOROBOND", sleeve: "Úroková složka" },
-        { name: "Prémiový dluhopis EUROPE", sleeve: "Úroková složka" },
-        { name: "ČS KORPORÁTNÍ DLUHOPISOVÝ", sleeve: "Úroková složka" },
-        { name: "High Yield dluhopisový", sleeve: "Úroková složka" },
-        { name: "TRENDBOND", sleeve: "Úroková složka" },
-        { name: "ERSTE BOND DANUBIA (VT) CZK", sleeve: "Úroková složka" },
-        { name: "ERSTE BOND EUROPE HIGH YIELD (VT) CZK", sleeve: "Úroková složka" },
-        { name: "ERSTE RESPONSIBLE BOND (CZK)", sleeve: "Úroková složka" },
-        { name: "ERSTE PORTFOLIO BOND EUROPE (VT) CZK", sleeve: "Úroková složka" },
-        { name: "Global Templeton Global Bond Fund A (acc) CZK-H1", sleeve: "Úroková složka" },
-        { name: "BNP Paribas Funds Global Absolute Return Bond [Classic RH CZK, C]", sleeve: "Úroková složka" },
-        { name: "Fidelity Funds - Climate Transition Bond Fund A-ACC-CZK (hedged)", sleeve: "Úroková složka" },
-        { name: "BNP Paribas Funds Euro Corporate Bond [Classic H CZK, C]", sleeve: "Úroková složka" },
-        { name: "Goldman Sachs Global Yield Opportunities - X Cap CZK (hedged i)", sleeve: "Úroková složka" },
-        { name: "BNP Paribas Funds Global High Yield Bond [Classic H CZK, C]", sleeve: "Úroková složka" },
-        { name: "Brandywine Global Income Optimiser Fund A (acc) CZK-H1", sleeve: "Úroková složka" },
-        { name: "Fidelity Funds - Global High Yield Fund Světových dluhopisů s vysokým výnosem A-ACC-CZK (hedged)", sleeve: "Úroková složka" },
-        { name: "Fidelity Funds - European High Yield Fund A-ACC-CZK (hedged)", sleeve: "Úroková složka" },
-        { name: "ERSTE STOCK VALUE", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK VALUE CZK", sleeve: "Akciová složka" },
-        { name: "TOP STOCKS", sleeve: "Akciová složka" },
-        { name: "STOCK SMALL CAPS", sleeve: "Akciová složka" },
-        { name: "ERSTE DIGITAL ASSETS CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE SECURITY INVEST CZK", sleeve: "Akciová složka" },
-        { name: "Fidelity Funds - Global Dividend Fund", sleeve: "Akciová složka" },
-        { name: "Fidelity Funds - Global Dividend Fund Světových dividend A-ACC-CZK(hdg)", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK WORLD (VT) CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE RESPONSIBLE STOCK GLOBAL (VT) CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE Future Invest (VT)", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Global Climate & Environment Equity - X Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Global Equity Impact Opportunities - X Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Environmental Absolute Return Thematic Equity (EARTH) [Classic RH CZK, C]", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Global Equity Income - X Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Global Sustainable Equity - X Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "Fidelity Funds - World Fund A-ACC-CZK (hedged)", sleeve: "Akciová složka" },
-        { name: "Templeton Global Climate Change Fund A (acc) CZK-H1", sleeve: "Akciová složka" },
-        { name: "Generali Sustainable Growth Fund A CZK", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Sustainable Global Low Vol Equity [Classic H CZK, C]", sleeve: "Akciová složka" },
-        { name: "ERSTE RESPONSIBLE STOCK EUROPE (VT) CZK", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Europe Sustainable Equity - P Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "Franklin Mutual European Fund - A (acc) CZK-H1", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Euro Equity [Classic H CZK, C]", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Nordic Small Cap [Classic RH CZK, C]", sleeve: "Akciová složka" },
-        { name: "Fidelity Funds - Europe Equity ESG Fund A-ACC-CZK (hedged)", sleeve: "Akciová složka" },
-        { name: "Allianz European Equity Dividend hedged CZK", sleeve: "Akciová složka" },
-        { name: "Allianz Europe Equity Growth Select hedged CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE RESPONSIBLE STOCK AMERICA (VT) CZK", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds US Growth [Classic H CZK, C]", sleeve: "Akciová složka" },
-        { name: "Fidelity Funds - America Fund A-ACC-CZK (hedged)", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK JAPAN (VT) CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK BIOTEC (VT) CZK", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Disruptive Technology [Classic CZK, C]", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Health Care Innovators [Classic RH CZK, C]", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Global Social Impact Equity - X Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "ERSTE WWF STOCK ENVIRONMENT (VT) CZK", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Aqua [Classic RH CZK, C]", sleeve: "Akciová složka" },
-        { name: "Fidelity Funds - Future Connectivity Fund A-ACC-CZK (CZK/USD hedged)", sleeve: "Akciová složka" },
-        { name: "Allianz Global Artificial Intelligence CZK (hedged)", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK EM GLOBAL (VT) CZK", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Funds Emerging Equity [Classic CZK, C]", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Emerging Markets Equity Income X Cap CZK (hedged i)", sleeve: "Akciová složka" },
-        { name: "BNP Paribas Asia ex-Japan Equity (Classic RH CZK, C)", sleeve: "Akciová složka" },
-        { name: "Templeton Asian Growth Fund A (acc) CZK-H1", sleeve: "Akciová složka" },
-        { name: "Erste Group Index-Zertifikat PX-TRnet Open End", sleeve: "Akciová složka" },
-        { name: "Goldman Sachs Central Europe Equity P Cap CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK ISTANBUL (VT) CZK", sleeve: "Akciová složka" },
-        { name: "ERSTE STOCK EUROPE EMERGING (VT) CZK", sleeve: "Akciová složka" },
-        { name: "SPOROTREND", sleeve: "Akciová složka" },
-        { name: "REICO NEMOVITOSTNÍ", sleeve: "Alternativní složka" },
-        { name: "REICO LONG LEASE", sleeve: "Alternativní složka" },
-        { name: "ERSTE STOCK REAL ESTATE (VT) CZK", sleeve: "Alternativní složka" },
-        { name: "BNP Paribas Flexi I Commodities [Classic H CZK, C]", sleeve: "Alternativní složka" },
-        { name: "Goldman Sachs Commodity Enhanced X Cap (CZK) (hedged i)", sleeve: "Alternativní složka" },
-        { name: "ERSTE STOCK COMMODITIES (VT) CZK", sleeve: "Alternativní složka" },
-        { name: "Erste Private Markets Evergreen ELTIF PR-CZK-H-acc", sleeve: "Alternativní složka" },
-        { name: "BNP Paribas Flexi I Flexible Convertible Bond [Classic H CZK, C]", sleeve: "Alternativní složka" },
-        { name: "BNP Paribas Alternative Strategies Diversified Private Credit C-Vintage-H1 2025 (CZK, RH)", sleeve: "Alternativní složka" },
-        { name: "BNP Paribas Funds Global Convertible [Classic RH CZK, C]", sleeve: "Alternativní složka" },
-      ];
-
-      const KNOWN_ISINS = {
-        "SPOROINVEST": "CZ0008472271",
-        "SPOROBOND": "CZ0008472263",
-        "ČS KORPORÁTNÍ DLUHOPISOVÝ": "CZ0008472230",
-        "TOP STOCKS": "CZ0008472404",
-        "STOCK SMALL CAPS": "CZ0008475043",
-        "ERSTE STOCK VALUE CZK": "AT0000A2STH3",
-        "ERSTE SECURITY INVEST CZK": "AT0000A3N017",
-        "ERSTE DIGITAL ASSETS CZK": "AT0000A3S4B1",
-        "REICO LONG LEASE": "CZ0008476280",
-        "Prémiový dluhopis EUROPE": "XS3347099148",
+      const FUND_CATALOG_BY_CURRENCY = {
+        CZK: [
+          { name: "Sporoinvest", sleeve: "Úroková složka", isin: "CZ0008472271" },
+          { name: "Sporobond", sleeve: "Úroková složka", isin: "CZ0008472263" },
+          { name: "Goldman Sachs Czech Crown Bond", sleeve: "Úroková složka", isin: "LU0082087437" },
+          { name: "Templeton Global Bond", sleeve: "Úroková složka", isin: "LU0768356593" },
+          { name: "ČS korporátní dluhopisový", sleeve: "Úroková složka", isin: "CZ0008472230" },
+          { name: "BNP Euro Corporate Bond", sleeve: "Úroková složka", isin: "LU1022391483" },
+          { name: "Fidelity Global Income Fund", sleeve: "Úroková složka", isin: "LU1692483032" },
+          { name: "High Yield dluhopisový", sleeve: "Úroková složka", isin: "CZ0008472412" },
+          { name: "Fidelity Global High Yield", sleeve: "Úroková složka", isin: "LU1114574418" },
+          { name: "Fidelity European High Yield", sleeve: "Úroková složka", isin: "LU0979393146" },
+          { name: "Trendbond", sleeve: "Úroková složka", isin: "CZ0008472297" },
+          { name: "Top Stocks", sleeve: "Akciová složka", isin: "CZ0008472404" },
+          { name: "Stock Small Caps", sleeve: "Akciová složka", isin: "CZ0008475043" },
+          { name: "Erste Responsible Stock Global", sleeve: "Akciová složka", isin: "AT0000A1AW14" },
+          { name: "Fidelity World Fund", sleeve: "Akciová složka", isin: "LU1400167216" },
+          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0979392924" },
+          { name: "Goldman Sachs Global Sustainable Equity", sleeve: "Akciová složka", isin: "LU1542713687" },
+          { name: "Invesco Metaverse and AI Fund", sleeve: "Akciová složka", isin: "LU2484078758" },
+          { name: "BlueSphere World Equity UCITS ETF Accum Hedged", sleeve: "Akciová složka", isin: "IE000YC7FPB6" },
+          { name: "Goldman Sachs Patrimonial Aggressive", sleeve: "Akciová složka", isin: "LU0405489047" },
+          { name: "Erste Responsible Stock America", sleeve: "Akciová složka", isin: "AT0000639463" },
+          { name: "Fidelity America Fund", sleeve: "Akciová složka", isin: "LU0979392767" },
+          { name: "Goldman Sachs US Enhanced Equity", sleeve: "Akciová složka", isin: "LU0405488825" },
+          { name: "BNP US Growth", sleeve: "Akciová složka", isin: "LU0823434310" },
+          { name: "Sporotrend", sleeve: "Akciová složka", isin: "CZ0008472289" },
+          { name: "Erste Responsible Stock Europe", sleeve: "Akciová složka", isin: "AT0000A2QP89" },
+          { name: "Goldman Sachs Central European Equity", sleeve: "Akciová složka", isin: "LU0082087353" },
+          { name: "BNP Euro Equity", sleeve: "Akciová složka", isin: "LU0823401228" },
+          { name: "BNP Nordic Small Cap", sleeve: "Akciová složka", isin: "LU2451817873" },
+          { name: "Franklin Mutual European", sleeve: "Akciová složka", isin: "LU0768356080" },
+          { name: "Fidelity Asian Special Situations", sleeve: "Akciová složka", isin: "LU1213835512" },
+          { name: "BNPPF Asia ex-Japan Equity", sleeve: "Akciová složka", isin: "LU3215558704" },
+          { name: "Templeton Asian Growth", sleeve: "Akciová složka", isin: "LU0768356247" },
+          { name: "Goldman Sachs Japan Equity", sleeve: "Akciová složka", isin: "LU0429745879" },
+          { name: "Erste Stock EM Global VT", sleeve: "Akciová složka", isin: "AT0000A10QN3" },
+          { name: "Erste Stock Biotec", sleeve: "Akciová složka", isin: "AT0000A0XYP0" },
+          { name: "Erste Security Invest", sleeve: "Akciová složka", isin: "AT0000A3N017" },
+          { name: "BNP Disruptive Technology", sleeve: "Akciová složka", isin: "LU1789409619" },
+          { name: "Goldman Sachs Social Impact Equity", sleeve: "Akciová složka", isin: "LU2033393641" },
+          { name: "Allianz Artificial Intelligence", sleeve: "Akciová složka", isin: "LU1641601064" },
+          { name: "Fidelity Global Industrials", sleeve: "Akciová složka", isin: "LU2898087106" },
+          { name: "Erste WWF Stock Environment", sleeve: "Akciová složka", isin: "AT0000A044X2" },
+          { name: "Goldman Sachs Global Climate & Environment", sleeve: "Akciová složka", isin: "LU0429746091" },
+          { name: "BNP Aqua", sleeve: "Akciová složka", isin: "LU1458425730" },
+          { name: "Goldman Sachs Global Impact Opportunities", sleeve: "Akciová složka", isin: "LU0295015134" },
+          { name: "BNP Health Care Innovators", sleeve: "Akciová složka", isin: "LU2739071228" },
+          { name: "Erste Stock Commodities", sleeve: "Alternativní složka", isin: "AT0000A1E119" },
+          { name: "BNPP Flexi I Commodities", sleeve: "Alternativní složka", isin: "LU1931956954" },
+          { name: "Reico ČS Nemovitostní", sleeve: "Alternativní složka", isin: "CZ0008472545" },
+          { name: "Reico ČS Long lease", sleeve: "Alternativní složka", isin: "CZ0008476280" },
+          { name: "BNP Paribas Funds Global Convertible", sleeve: "Alternativní složka", isin: "LU0823394423" },
+          { name: "Goldman Sachs Commodity Enhanced", sleeve: "Alternativní složka", isin: "LU0629872945" },
+          { name: "BNPP Flexi I Absolute Return Convertible", sleeve: "Alternativní složka", isin: "LU2020654062" },
+          { name: "BNPP Paribas Global Absolute Return", sleeve: "Alternativní složka", isin: "LU2155808657" },
+        ],
+        EUR: [
+          { name: "BNP Paribas Funds Aqua", sleeve: "Akciová složka", isin: "LU1165135440" },
+          { name: "Goldman Sachs Global Sustainable Equity", sleeve: "Akciová složka", isin: "LU0119216553" },
+          { name: "BNP Paribas Funds US Growth", sleeve: "Akciová složka", isin: "LU0823434237" },
+          { name: "BNP Paribas Funds Disruptive Technology", sleeve: "Akciová složka", isin: "LU0823421689" },
+          { name: "BNP Paribas Funds Euro Equity", sleeve: "Akciová složka", isin: "LU0823401574" },
+          { name: "ERSTE Responsible Stock America VT", sleeve: "Akciová složka", isin: "AT0000A0A1P0" },
+          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0605515377" },
+          { name: "Allianz Global Artificial Intelligence (EUR)", sleeve: "Akciová složka", isin: "LU1548497699" },
+          { name: "Fidelity European Multi Asset Income Fund", sleeve: "Akciová složka", isin: "LU0261950553" },
+          { name: "Fidelity Fund Global Income", sleeve: "Úroková složka", isin: "LU0882574998" },
+          { name: "BNP Paribas Funds Euro Government Bond", sleeve: "Úroková složka", isin: "LU0111548326" },
+          { name: "BNP Paribas Funds Global Convertible", sleeve: "Úroková složka", isin: "LU0823394852" },
+          { name: "BNP Paribas Funds Euro Corporate Bond", sleeve: "Úroková složka", isin: "LU0131210360" },
+          { name: "Templeton Global Bond Fund", sleeve: "Úroková složka", isin: "LU0152980495" },
+          { name: "Franklin Euro Government Bond Fund", sleeve: "Úroková složka", isin: "LU0093669546" },
+          { name: "Fidelity Euro Bond Fund A-ACC-Euro", sleeve: "Úroková složka", isin: "LU0251130638" },
+          { name: "BNP PARIBAS FLEXI I ABS Return Convertible", sleeve: "Úroková složka", isin: "LU2020654575" },
+          { name: "BNPP Flexi I Flexible Convertible Bond", sleeve: "Úroková složka", isin: "LU2020653924" },
+          { name: "ERSTE PORTFOLIO BOND EUROPE", sleeve: "Úroková složka", isin: "AT0000673215" },
+          { name: "ERSTE BOND EUROPE HIGH YIELD", sleeve: "Úroková složka", isin: "AT0000673280" },
+          { name: "GOLDMAN SACHS USD GREEN BOND", sleeve: "Úroková složka", isin: "LU2578936853" },
+          { name: "Franklin European Corporate Bond Fund", sleeve: "Úroková složka", isin: "LU0496369546" },
+          { name: "BNP Paribas Funds Euro Money Market", sleeve: "Úroková složka", isin: "LU0083138064" },
+          { name: "ERSTE RESERVE DOLLAR", sleeve: "Úroková složka", isin: "AT0000A0C8W9" },
+        ],
+        USD: [
+          { name: "Allianz Artificial Intelligence", sleeve: "Akciová složka", isin: "LU1548497426" },
+          { name: "BNP Aqua", sleeve: "Akciová složka", isin: "LU1620156130" },
+          { name: "BNP US Growth", sleeve: "Akciová složka", isin: "LU0823434583" },
+          { name: "BNP Disruptive Technology", sleeve: "Akciová složka", isin: "LU0823421333" },
+          { name: "Erste Responsible Stock America", sleeve: "Akciová složka", isin: "AT0000673371" },
+          { name: "Goldman Sachs US Enhanced Equity", sleeve: "Akciová složka", isin: "LU0082087940" },
+          { name: "Franklin Technology", sleeve: "Akciová složka", isin: "LU0109392836" },
+          { name: "Franklin U.S Oportunities", sleeve: "Akciová složka", isin: "LU0109391861" },
+          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0772969993" },
+          { name: "Fidelity Global Financial Services", sleeve: "Akciová složka", isin: "LU1711970159" },
+          { name: "Fidelity Global Quality Income", sleeve: "Akciová složka", isin: "IE000YUTMIU2" },
+          { name: "Fidelity Global Bond", sleeve: "Úroková složka", isin: "LU0261946288" },
+          { name: "SUSTAINABLE GLOBAL CORPORATE BOND", sleeve: "Úroková složka", isin: "LU0282388437" },
+          { name: "BNPP Flexi I Flexible Convertible Bond", sleeve: "Úroková složka", isin: "LU2020653767" },
+          { name: "Franklin U.S. Government Fund", sleeve: "Úroková složka", isin: "LU0138076046" },
+          { name: "GOLDMAN SACHS USD GREEN BOND", sleeve: "Úroková složka", isin: "LU2578936853" },
+          { name: "Franklin U.S. Dollar Short-Term Money Market", sleeve: "Úroková složka", isin: "LU0128526901" },
+          { name: "BNP Paribas Funds USD Money Market", sleeve: "Úroková složka", isin: "LU0012186622" },
+        ],
       };
+
+      const ALL_FUNDS_BY_CURRENCY = Object.fromEntries(
+        Object.entries(FUND_CATALOG_BY_CURRENCY).map(([code, funds]) => [
+          code,
+          funds.map(({ name, sleeve }) => ({ name, sleeve })),
+        ])
+      );
+
+      const KNOWN_ISINS_BY_CURRENCY = Object.fromEntries(
+        Object.entries(FUND_CATALOG_BY_CURRENCY).map(([code, funds]) => [
+          code,
+          Object.fromEntries(funds.map((fund) => [fund.name, fund.isin])),
+        ])
+      );
 
       const FX_CZK_TO_EUR = 0.04;
       const FX_CZK_TO_USD = 0.043;
@@ -1505,7 +1520,7 @@
         const [showSearch, setShowSearch] = useState(false);
         const [searchQuery, setSearchQuery] = useState("");
         const [filterSleeve, setFilterSleeve] = useState("Všechny složky");
-        const { initialInvestment, monthlyContribution, formatMoney } = useInvestment();
+        const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
 
         useEffect(() => {
           setFunds((portfolio.funds || []).map((fund) => ({ ...fund })));
@@ -1584,7 +1599,9 @@
         };
 
         const normalizedQuery = searchQuery.trim().toLowerCase();
-        const availableFunds = ALL_FUNDS.filter((fund) => {
+        const activeFunds = ALL_FUNDS_BY_CURRENCY[currency] || [];
+        const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
+        const availableFunds = activeFunds.filter((fund) => {
           const matchesSleeve = filterSleeve === "Všechny složky" ? true : fund.sleeve === filterSleeve;
           const matchesQuery = normalizedQuery ? fund.name.toLowerCase().includes(normalizedQuery) : true;
           const notAlreadyUsed = !existingFundNames.has(fund.name.trim().toLowerCase());
@@ -1597,7 +1614,7 @@
           setSearchQuery("");
         };
 
-        const isinFor = (fundName) => KNOWN_ISINS[fundName] || "";
+        const isinFor = (fundName) => activeIsins[fundName] || "";
         const amountForFund = (fund) => amountForFundDisplay(fund, funds, initialInvestment, monthlyContribution, sleeveCaps, formatMoney);
         const renderAmountCell = (fund, compact = false) => {
           const amount = amountForFund(fund);
@@ -1911,7 +1928,7 @@
       }
 
       function CustomPortfolioBuilder() {
-        const { initialInvestment, monthlyContribution, formatMoney } = useInvestment();
+        const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
         const [funds, setFunds] = useState([]);
         const [showSearch, setShowSearch] = useState(false);
         const [searchQuery, setSearchQuery] = useState("");
@@ -1960,7 +1977,9 @@
 
         const existingFundNames = new Set(funds.map((fund) => fund.name.trim().toLowerCase()));
         const normalizedQuery = searchQuery.trim().toLowerCase();
-        const availableFunds = ALL_FUNDS.filter((fund) => {
+        const activeFunds = ALL_FUNDS_BY_CURRENCY[currency] || [];
+        const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
+        const availableFunds = activeFunds.filter((fund) => {
           const matchesSleeve = filterSleeve === "Všechny složky" ? true : fund.sleeve === filterSleeve;
           const matchesQuery = normalizedQuery ? fund.name.toLowerCase().includes(normalizedQuery) : true;
           const notAlreadyUsed = !existingFundNames.has(fund.name.trim().toLowerCase());
@@ -2036,7 +2055,7 @@
           setShowSimulation(true);
         };
 
-        const isinFor = (fundName) => KNOWN_ISINS[fundName] || "";
+        const isinFor = (fundName) => activeIsins[fundName] || "";
         const amountForFund = (fund) => amountForFundDisplay(fund, funds, initialInvestment, monthlyContribution, sleeveAllocationMap, formatMoney);
         const renderAmountCell = (fund, compact = false) => {
           const amount = amountForFund(fund);
@@ -2306,6 +2325,14 @@
       }
 
       function App() {
+        useEffect(() => {
+          const loader = document.getElementById("boot-loader");
+          if (loader) {
+            loader.style.opacity = "0";
+            setTimeout(() => loader.remove(), 400);
+          }
+        }, []);
+
         return (
           <InvestmentProvider>
             <Index />
@@ -2319,15 +2346,6 @@
       const rootEl = document.getElementById("root");
       ReactDOM.createRoot(rootEl).render(<App />);
 
-      // Hide boot loader once React has rendered
-      requestAnimationFrame(() => {
-        const loader = document.getElementById("boot-loader");
-        if (loader) {
-          loader.style.opacity = "0";
-          setTimeout(() => loader.remove(), 400);
-        }
-      });
     </script>
   </body>
 </html>
-
