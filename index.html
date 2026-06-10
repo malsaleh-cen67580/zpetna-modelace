@@ -934,6 +934,14 @@
           Object.fromEntries(funds.map((fund) => [fund.name, fund.isin])),
         ])
       );
+      function filterFundsByCurrency(funds, currency) {
+        const activeFunds = ALL_FUNDS_BY_CURRENCY[currency] || [];
+        if (!activeFunds.length) return [];
+        const activeNames = new Set(activeFunds.map((fund) => fund.name.trim().toLowerCase()));
+        return (funds || [])
+          .filter((fund) => activeNames.has((fund.name || "").trim().toLowerCase()))
+          .map((fund) => ({ ...fund }));
+      }
 
       const FX_CZK_TO_EUR = 0.04;
       const FX_CZK_TO_USD = 0.043;
@@ -1532,11 +1540,11 @@
         const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
 
         useEffect(() => {
-          setFunds((portfolio.funds || []).map((fund) => ({ ...fund })));
+          setFunds(filterFundsByCurrency(portfolio.funds, currency));
           setShowSearch(false);
           setSearchQuery("");
           setFilterSleeve("Všechny složky");
-        }, [portfolio]);
+        }, [portfolio, currency]);
 
         useEffect(() => {
           onAllocationChange(funds);
@@ -1601,7 +1609,7 @@
         };
 
         const resetFunds = () => {
-          setFunds((portfolio.funds || []).map((fund) => ({ ...fund })));
+          setFunds(filterFundsByCurrency(portfolio.funds, currency));
           setShowSearch(false);
           setSearchQuery("");
           setFilterSleeve("Všechny složky");
@@ -1725,7 +1733,7 @@
       }
 
       function PresetPortfolios() {
-        const { initialInvestment } = useInvestment();
+        const { currency, initialInvestment } = useInvestment();
         const [selectedId, setSelectedId] = useState(null);
         const [detailFunds, setDetailFunds] = useState([]);
         const stats = useMemo(() => {
@@ -1747,7 +1755,7 @@
         }, [detailFunds, selected]);
         const openDetail = (portfolio) => {
           setSelectedId(portfolio.id);
-          setDetailFunds((portfolio.funds || []).map((fund) => ({ ...fund })));
+          setDetailFunds(filterFundsByCurrency(portfolio.funds, currency));
         };
         return (
           <div className="space-y-6">
@@ -1997,6 +2005,19 @@
 
         const templateOrder = [{ id: "custom", label: "Prázdné portfolio" }, ...PRESET_PORTFOLIOS.map((p) => ({ id: p.id, label: p.name }))];
 
+        useEffect(() => {
+          const template = activeTemplate !== "custom" ? PRESET_PORTFOLIOS.find((p) => p.id === activeTemplate) : null;
+          if (template) {
+            setFunds(filterFundsByCurrency(template.funds, currency));
+          } else {
+            setFunds((prev) => filterFundsByCurrency(prev, currency));
+          }
+          setShowSearch(false);
+          setSearchQuery("");
+          setFilterSleeve("Všechny složky");
+          setShowSimulation(false);
+        }, [currency, activeTemplate]);
+
         const loadTemplate = (id) => {
           if (id === "custom") {
             setFunds([]);
@@ -2009,7 +2030,7 @@
           }
           const template = PRESET_PORTFOLIOS.find((p) => p.id === id);
           if (!template) return;
-          setFunds((template.funds || []).map((fund) => ({ ...fund })));
+          setFunds(filterFundsByCurrency(template.funds, currency));
           setActiveTemplate(id);
           setShowSearch(false);
           setSearchQuery("");
