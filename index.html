@@ -796,13 +796,12 @@
         const sleeveContributed = Object.fromEntries(SLEEVE_SERIES.map(({ key }) => [key, []]));
         const sleeveState = Object.fromEntries(
           SLEEVE_SERIES.map(({ key }) => {
-            const weight = Math.max(0, Number(allocation?.[key]) || 0) / 100;
             return [
               key,
               {
-                value: initialInvestment * weight,
-                contributed: initialInvestment * weight,
-                monthlyContribution: normalizedContribution * weight,
+                value: initialInvestment,
+                contributed: initialInvestment,
+                monthlyContribution: normalizedContribution,
               },
             ];
           })
