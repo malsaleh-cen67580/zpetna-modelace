@@ -1852,6 +1852,13 @@
           return out;
         }, [initialInvestment]);
         const selected = PRESET_PORTFOLIOS.find((p) => p.id === selectedId) || null;
+        useEffect(() => {
+          if (!selected) {
+            setDetailFunds([]);
+            return;
+          }
+          setDetailFunds(getTemplateFundsForCurrency(selected, currency));
+        }, [selected, currency]);
         const detailAllocation = useMemo(() => {
           if (!detailFunds || !detailFunds.length)
             return selected ? selected.allocation : { bonds: 0, stocks: 0, alternatives: 0 };
