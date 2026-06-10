@@ -1051,12 +1051,12 @@
         return filterFundsByCurrency(currencySpecificFunds || template?.funds || [], currency);
       }
 
-      const FX_CZK_TO_EUR = 0.04;
-      const FX_CZK_TO_USD = 0.043;
-      const FX_RATES = { CZK: 1, EUR: FX_CZK_TO_EUR, USD: FX_CZK_TO_USD };
+      const AVG_CZK_PER_EUR = 25;
+      const AVG_CZK_PER_USD = 23;
+      const FX_RATES_IN_CZK = { CZK: 1, EUR: AVG_CZK_PER_EUR, USD: AVG_CZK_PER_USD };
       function convertAmount(amount, from, to) {
         if (from === to) return amount;
-        return Math.round((amount / FX_RATES[from]) * FX_RATES[to]);
+        return Math.round((amount * FX_RATES_IN_CZK[from]) / FX_RATES_IN_CZK[to]);
       }
       const InvestmentContext = createContext(null);
 
@@ -1091,7 +1091,7 @@
             setInitialInvestment,
             monthlyContribution,
             setMonthlyContribution,
-            fxRate: FX_CZK_TO_EUR,
+            fxRate: FX_RATES_IN_CZK[currency] || 1,
             formatMoney,
           };
         }, [currency, initialInvestment, monthlyContribution]);
