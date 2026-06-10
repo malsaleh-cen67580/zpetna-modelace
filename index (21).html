@@ -183,7 +183,7 @@
     <script type="text/babel" data-type="module" data-presets="react">
       "use strict";
 
-      const { useState, useMemo, useEffect, useRef, useContext, createContext } =
+      const { useState, useMemo, useEffect, useRef, useContext, createContext, useId } =
         React;
       const {
         ResponsiveContainer,
@@ -600,7 +600,7 @@
           "Erste Responsible Stock America":                   { p1y:  17.77, p3y:  null, p5y:  9.30 },
           "Goldman Sachs US Enhanced Equity":                  { p1y:  14.03, p3y:  null, p5y: 10.86 },
           "Franklin Technology":                               { p1y:  25.74, p3y:  null, p5y:  8.43 },
-          "Franklin U.S Oportunities":                         { p1y:   7.10, p3y:  null, p5y:  5.40 },
+          "Franklin U.S. Opportunities":                       { p1y:   7.10, p3y:  null, p5y:  5.40 },
           "Fidelity Global Dividend":                          { p1y:  12.91, p3y:  null, p5y:  8.25 },
           "Fidelity Global Financial Services":                { p1y:   5.32, p3y:  null, p5y:  8.52 },
           "Fidelity Global Quality Income":                    { p1y:  12.45, p3y:  null, p5y:  null }, // inception 27.03.2017, data gap
@@ -1274,7 +1274,7 @@
           { name: "Erste Responsible Stock America", sleeve: "Akciová složka", isin: "AT0000673371" },
           { name: "Goldman Sachs US Enhanced Equity", sleeve: "Akciová složka", isin: "LU0082087940" },
           { name: "Franklin Technology", sleeve: "Akciová složka", isin: "LU0109392836" },
-          { name: "Franklin U.S Oportunities", sleeve: "Akciová složka", isin: "LU0109391861" },
+          { name: "Franklin U.S. Opportunities", sleeve: "Akciová složka", isin: "LU0109391861" },
           { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0772969993" },
           { name: "Fidelity Global Financial Services", sleeve: "Akciová složka", isin: "LU1711970159" },
           { name: "Fidelity Global Quality Income", sleeve: "Akciová složka", isin: "IE000YUTMIU2" },
@@ -1580,6 +1580,8 @@
         baseStrategyId = null,
       }) {
         const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
+        const chartId = useId().replace(/:/g, "");
+        const portfolioGradientId = `ep-portfolio-fill-${chartId}`;
         const [viewMode, setViewMode] = useState("value");
         const [compareStrategyIds, setCompareStrategyIds] = useState([]);
         const [showSleeves, setShowSleeves] = useState(false);
@@ -1756,7 +1758,7 @@
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="ep-portfolio-fill" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={portfolioGradientId} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#1e5fb8" stopOpacity={0.55} />
                       <stop offset="100%" stopColor="#1e5fb8" stopOpacity={0.02} />
                     </linearGradient>
@@ -1782,7 +1784,7 @@
                         />
                       ))
                     : (
-                        <Area type="monotone" name="Vybrané portfolio" dataKey={portfolioKey} stroke="#1e5fb8" strokeWidth={2.5} fill="url(#ep-portfolio-fill)" activeDot={{ r: 4 }} />
+                        <Area type="monotone" name="Vybrané portfolio" dataKey={portfolioKey} stroke="#1e5fb8" strokeWidth={2.5} fill={`url(#${portfolioGradientId})`} activeDot={{ r: 4 }} />
                       )}
                   <Area type="monotone" name={viewMode === "percent" ? "Reálná změna po inflaci" : "Reálná hodnota po inflaci"} dataKey={inflationKey} stroke="#0f766e" strokeWidth={2.6} strokeDasharray="6 4" fill="transparent" activeDot={{ r: 3.5 }} />
                 {!showSleeves && activeComparisonStrategies.map((strategy) => (
@@ -1929,30 +1931,6 @@
               </li>
             ))}
           </ul>
-        );
-      }
-
-      function PerformanceTable({ stats }) {
-        return (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">
-              Historická výkonnost (% p.a.)
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <div className="text-[11px] text-slate-500">1 rok /p.a.</div>
-                <PerformanceCell value={stats.performance1y} />
-              </div>
-              <div className="border-x border-slate-200">
-                <div className="text-[11px] text-slate-500">3 roky /p.a.</div>
-                <PerformanceCell value={stats.performance3y} />
-              </div>
-              <div>
-                <div className="text-[11px] text-slate-500">5 let /p.a.</div>
-                <PerformanceCell value={stats.performance5y} />
-              </div>
-            </div>
-          </div>
         );
       }
 
@@ -2262,99 +2240,6 @@
       /* ------------------------------------------------------------------ */
       /*  Custom Portfolio Builder                                           */
       /* ------------------------------------------------------------------ */
-      const BUILDER_ASSETS = [
-        "stocks",
-        "bonds",
-        "realEstate",
-        "commodities",
-        "cash",
-      ];
-      const DEFAULT_ALLOCATION = {
-        stocks: 40,
-        bonds: 30,
-        realEstate: 10,
-        commodities: 10,
-        cash: 10,
-      };
-
-      function SliderRow({ assetKey, value, max, onChange }) {
-        const meta = ASSET_CLASSES[assetKey];
-        const sliderRef = useRef(null);
-        useEffect(() => {
-          if (sliderRef.current) {
-            sliderRef.current.style.setProperty("--val", value + "%");
-          }
-        }, [value]);
-        const clamp = (n) => Math.max(0, Math.min(max, Math.round(n)));
-
-        return (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-ep-blue/30">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span
-                  className="h-3 w-3 rounded-sm"
-                  style={{ backgroundColor: meta.color }}
-                />
-                <div>
-                  <div className="text-sm font-semibold ep-text-navy">
-                    {meta.label}
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    {meta.description}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={value}
-                  onChange={(e) => onChange(clamp(Number(e.target.value || 0)))}
-                  className="no-spin w-16 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-right text-sm font-semibold tabular-nums ep-text-navy outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20"
-                  aria-label={"Procento — " + meta.label}
-                />
-                <span className="text-xs font-semibold text-slate-500">%</span>
-              </div>
-            </div>
-            <input
-              ref={sliderRef}
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={value}
-              onChange={(e) => onChange(clamp(Number(e.target.value)))}
-              className="ep-slider"
-              aria-label={"Slider — " + meta.label}
-            />
-          </div>
-        );
-      }
-
-      function StatTile({ label, value, hint, tone }) {
-        const toneClass =
-          tone === "positive"
-            ? "text-emerald-600"
-            : tone === "negative"
-            ? "text-rose-600"
-            : "ep-text-navy";
-        return (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-[10px] uppercase tracking-widest text-slate-500">
-              {label}
-            </div>
-            <div className={"mt-1 text-xl font-bold tabular-nums " + toneClass}>
-              {value}
-            </div>
-            {hint && (
-              <div className="mt-1 text-[11px] text-slate-500">{hint}</div>
-            )}
-          </div>
-        );
-      }
-
       function getClosestPortfolioProfile(funds, currency) {
         if (!funds || !funds.length) {
           return {
