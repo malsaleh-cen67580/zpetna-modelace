@@ -1593,6 +1593,9 @@
             setShowSleeves(false);
           }
         }, [compareStrategyIds]);
+        useEffect(() => {
+          if (showSleeves) setViewMode("value");
+        }, [showSleeves]);
         const activeComparisonStrategies = useMemo(
           () => COMPARISON_STRATEGIES.filter((strategy) => compareStrategyIds.includes(strategy.id)),
           [compareStrategyIds]
