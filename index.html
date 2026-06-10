@@ -755,6 +755,11 @@
       }
 
       const TIMELINE = buildMonthlyTimeline();
+      const SLEEVE_SERIES = [
+        { key: "bonds", label: "Úroková složka", color: "#1e5fb8" },
+        { key: "stocks", label: "Akciová složka", color: "#16a34a" },
+        { key: "alternatives", label: "Alternativní složka", color: "#f97316" },
+      ];
 
       /* ------------------------------------------------------------------ */
       /*  Portfolio math                                                     */
@@ -787,6 +792,21 @@
         const portfolio = [];
         const inflation = [];
         const contributed = [];
+        const sleeveValues = Object.fromEntries(SLEEVE_SERIES.map(({ key }) => [key, []]));
+        const sleeveContributed = Object.fromEntries(SLEEVE_SERIES.map(({ key }) => [key, []]));
+        const sleeveState = Object.fromEntries(
+          SLEEVE_SERIES.map(({ key }) => {
+            const weight = Math.max(0, Number(allocation?.[key]) || 0) / 100;
+            return [
+              key,
+              {
+                value: initialInvestment * weight,
+                contributed: initialInvestment * weight,
+                monthlyContribution: normalizedContribution * weight,
+              },
+            ];
+          })
+        );
         let portfolioValue = initialInvestment;
         let inflationValue = initialInvestment;
         let totalContributed = initialInvestment;
@@ -798,26 +818,47 @@
           portfolio.push(portfolioValue);
           inflation.push(inflationValue);
           contributed.push(totalContributed);
+          SLEEVE_SERIES.forEach(({ key }) => {
+            const state = sleeveState[key];
+            const assetMonthlyReturn = HISTORICAL_RETURNS[key]?.[i] || 0;
+            state.value = state.value * (1 + assetMonthlyReturn / 100) + state.monthlyContribution;
+            state.contributed += state.monthlyContribution;
+            sleeveValues[key].push(state.value);
+            sleeveContributed[key].push(state.contributed);
+          });
         }
 
-        return TIMELINE.map((t, i) => ({
-          date: t.label,
-          portfolio: portfolio[i],
-          inflation: inflation[i],
-          contributed: contributed[i],
-          recurringContributed: normalizedContribution * (i + 1),
-          ts: t.date.getTime(),
-        }));
+        return TIMELINE.map((t, i) => {
+          const row = {
+            date: t.label,
+            portfolio: portfolio[i],
+            inflation: inflation[i],
+            contributed: contributed[i],
+            recurringContributed: normalizedContribution * (i + 1),
+            ts: t.date.getTime(),
+          };
+          SLEEVE_SERIES.forEach(({ key }) => {
+            row[key] = sleeveValues[key][i];
+            row[`${key}Contributed`] = sleeveContributed[key][i];
+          });
+          return row;
+        });
       }
 
       function toPercentSeries(data, initialInvestment) {
         return data.map((row) => {
           const base = row.contributed || initialInvestment || 1;
-          return {
+          const percentRow = {
             ...row,
             portfolioPct: ((row.portfolio / base) - 1) * 100,
             inflationPct: ((row.inflation / base) - 1) * 100,
           };
+          SLEEVE_SERIES.forEach(({ key }) => {
+            const sleeveBase = row[`${key}Contributed`] || 0;
+            percentRow[`${key}Pct`] =
+              sleeveBase > 0 ? ((row[key] / sleeveBase) - 1) * 100 : 0;
+          });
+          return percentRow;
         });
       }
       function annualisedReturn(start, end, months) {
@@ -1515,11 +1556,20 @@
             <span className="font-semibold ep-text-navy tabular-nums">{formatValue(value)}</span>
           </div>
         );
+        const rows = payload.filter(
+          (entry) => typeof entry?.value === "number" && Number.isFinite(entry.value)
+        );
         return (
           <div className="rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-premium backdrop-blur">
             <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">{label}</div>
-            {payload[0] && <Row color="#1e5fb8" lbl="Portfolio" value={payload[0].value} />}
-            {payload[1] && <Row color="#0f766e" lbl={viewMode === "percent" ? "Reálná změna po inflaci" : "Reálná hodnota po inflaci"} value={payload[1].value} />}
+            {rows.map((entry) => (
+              <Row
+                key={entry.dataKey || entry.name}
+                color={entry.color || entry.stroke || "#1e5fb8"}
+                lbl={entry.name}
+                value={entry.value}
+              />
+            ))}
           </div>
         );
       }
@@ -1533,14 +1583,34 @@
         const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
         const [viewMode, setViewMode] = useState("value");
         const [compareStrategyIds, setCompareStrategyIds] = useState([]);
+        const [showSleeves, setShowSleeves] = useState(false);
         const effectiveMonthlyContribution = monthlyContribution;
         useEffect(() => {
           setCompareStrategyIds([]);
+          setShowSleeves(false);
         }, [baseStrategyId, title]);
+        useEffect(() => {
+          if (compareStrategyIds.length > 0) {
+            setShowSleeves(false);
+          }
+        }, [compareStrategyIds]);
         const activeComparisonStrategies = useMemo(
           () => COMPARISON_STRATEGIES.filter((strategy) => compareStrategyIds.includes(strategy.id)),
           [compareStrategyIds]
         );
+        const activeSleeveSeries = useMemo(
+          () =>
+            SLEEVE_SERIES.filter(({ key }) => (Number(allocation?.[key]) || 0) > 0).map(
+              ({ key, label, color }) => ({
+                key,
+                label,
+                color,
+                dataKey: viewMode === "percent" ? `${key}Pct` : key,
+              })
+            ),
+          [allocation, viewMode]
+        );
+        const canSplitSleeves = compareStrategyIds.length === 0 && activeSleeveSeries.length > 0;
         const rawData = useMemo(() => buildPerformanceSeries(allocation, initialInvestment, effectiveMonthlyContribution), [allocation, initialInvestment, effectiveMonthlyContribution]);
         const allComparisonSeriesMap = useMemo(() => {
           const entries = COMPARISON_STRATEGIES.map((strategy) => {
@@ -1613,7 +1683,24 @@
               </div>
             </div>
             <div className="mb-4">
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Srovnání strategií</div>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Srovnání strategií</div>
+                <label
+                  className={
+                    "inline-flex items-center gap-2 text-xs font-semibold " +
+                    (canSplitSleeves ? "cursor-pointer text-slate-700" : "cursor-not-allowed text-slate-400")
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={showSleeves && canSplitSleeves}
+                    onChange={(e) => setShowSleeves(e.target.checked)}
+                    disabled={!canSplitSleeves}
+                    className="h-4 w-4 rounded border-slate-300 text-ep-blue focus:ring-ep-blue/30"
+                  />
+                  Rozdělit do složek
+                </label>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {COMPARISON_STRATEGIES.map((strategy) => {
                   const active = compareStrategyIds.includes(strategy.id);
@@ -1639,6 +1726,11 @@
                   );
                 })}
               </div>
+              {!canSplitSleeves && compareStrategyIds.length > 0 ? (
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Rozdělení do složek je dostupné jen při zobrazení jedné varianty bez srovnání.
+                </p>
+              ) : null}
             </div>
 
             <div className="mb-4 grid gap-3 md:grid-cols-3">
@@ -1670,9 +1762,25 @@
                   <YAxis tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
-                  <Area type="monotone" name="Vybrané portfolio" dataKey={portfolioKey} stroke="#1e5fb8" strokeWidth={2.5} fill="url(#ep-portfolio-fill)" activeDot={{ r: 4 }} />
+                  {showSleeves && canSplitSleeves
+                    ? activeSleeveSeries.map((series) => (
+                        <Area
+                          key={series.key}
+                          type="monotone"
+                          name={series.label}
+                          dataKey={series.dataKey}
+                          stroke={series.color}
+                          strokeWidth={2.6}
+                          fill="transparent"
+                          activeDot={{ r: 4 }}
+                          connectNulls
+                        />
+                      ))
+                    : (
+                        <Area type="monotone" name="Vybrané portfolio" dataKey={portfolioKey} stroke="#1e5fb8" strokeWidth={2.5} fill="url(#ep-portfolio-fill)" activeDot={{ r: 4 }} />
+                      )}
                   <Area type="monotone" name={viewMode === "percent" ? "Reálná změna po inflaci" : "Reálná hodnota po inflaci"} dataKey={inflationKey} stroke="#0f766e" strokeWidth={2.6} strokeDasharray="6 4" fill="transparent" activeDot={{ r: 3.5 }} />
-                {activeComparisonStrategies.map((strategy) => (
+                {!showSleeves && activeComparisonStrategies.map((strategy) => (
                   <Area
                     key={strategy.id}
                     type="monotone"
@@ -1974,7 +2082,6 @@
           return (
             <div className={compact ? "text-left" : "text-right"}>
               <div className="text-xs font-semibold tabular-nums ep-text-navy">{amount.oneTime}</div>
-              <div className="mt-1 text-xs font-semibold tabular-nums ep-text-navy">{amount.monthly}/měs.</div>
             </div>
           );
         };
@@ -1985,7 +2092,7 @@
               <div>
                 <h3 className="text-sm font-semibold ep-text-navy md:text-base">Složení a alokace fondů</h3>
                 <p className="mt-1 text-[11px] font-semibold text-slate-600 md:text-xs">{portfolio.name}</p>
-                <p className="text-[11px] text-slate-500 md:text-xs">U každého fondu vidíš podíl v % i odpovídající částku. Limity portfolia a složek zůstávají uzamčené.</p>
+                <p className="text-[11px] text-slate-500 md:text-xs">U každého fondu vidíš podíl v % i odpovídající jednorázovou částku. Limity portfolia a složek zůstávají uzamčené.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                 <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{total} / 100 %</div>
@@ -2025,7 +2132,7 @@
                 <div>Fond / ISIN</div>
                 <div>Alokace</div>
                 <div className="text-right">%</div>
-                <div className="hidden md:block text-right">Částky</div>
+                <div className="hidden md:block text-right">Jednorázově</div>
                 <div></div>
               </div>
 
@@ -2440,7 +2547,6 @@
           return (
             <div className={compact ? "text-left" : "text-right"}>
               <div className="text-xs font-semibold tabular-nums ep-text-navy">{amount.oneTime}</div>
-              <div className="mt-1 text-xs font-semibold tabular-nums ep-text-navy">{amount.monthly}/měs.</div>
             </div>
           );
         };
@@ -2528,7 +2634,7 @@
                   <div>Fond / ISIN</div>
                   <div>Alokace</div>
                   <div className="text-right">%</div>
-                  <div className="hidden md:block text-right">Částky</div>
+                  <div className="hidden md:block text-right">Jednorázově</div>
                   <div></div>
                 </div>
 
