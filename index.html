@@ -498,6 +498,234 @@
         ],
       };
 
+      /* ------------------------------------------------------------------ */
+      /*  Actual fund performance data from documents (p.a. in %)           */
+      /*  CZK: Výkonnost k 3.6.2026  (1Y / 3Y / 5Y)                        */
+      /*  EUR: Výkonnost k 20.3.2026 (1Y / 5Y only – 3Y not available)     */
+      /*  USD: Výkonnost k 20.3.2026 (1Y / 5Y only – 3Y not available)     */
+      /*  null = data not published in the source document                  */
+      /* ------------------------------------------------------------------ */
+      const FUND_PERF_DATA = {
+        CZK: {
+          "Sporoinvest":                                       { p1y:   2.44, p3y:  4.07, p5y:  3.43 },
+          "Sporobond":                                         { p1y:   0.80, p3y:  4.18, p5y:  1.19 },
+          "Goldman Sachs Czech Crown Bond":                    { p1y:  -0.10, p3y:  3.12, p5y: -0.85 },
+          "Templeton Global Bond":                             { p1y:   5.53, p3y:  2.06, p5y:  0.02 },
+          "ČS korporátní dluhopisový":                         { p1y:   2.36, p3y:  4.95, p5y:  1.60 },
+          "BNP Euro Corporate Bond":                           { p1y:   3.14, p3y:  6.25, p5y:  2.55 },
+          "Fidelity Global Income Fund":                       { p1y:   5.46, p3y:  7.08, p5y:  3.19 },
+          "High Yield dluhopisový":                            { p1y:   3.08, p3y:  5.84, p5y:  3.05 },
+          "Fidelity Global High Yield":                        { p1y:   7.04, p3y:  8.44, p5y:  2.74 },
+          "Fidelity European High Yield":                      { p1y:   4.60, p3y:  8.90, p5y:  4.88 },
+          "Trendbond":                                         { p1y:   1.84, p3y:  4.81, p5y: -1.57 },
+          "Erste Stock Commodities":                           { p1y:  39.76, p3y: 16.20, p5y: 11.58 },
+          "BNPP Flexi I Commodities":                          { p1y:  43.78, p3y: 17.00, p5y: 12.82 },
+          "Reico ČS Nemovitostní":                             { p1y:   4.49, p3y:  3.98, p5y:  4.18 },
+          "Reico ČS Long lease":                               { p1y:   6.63, p3y:  5.06, p5y:  4.57 },
+          "BNP Paribas Funds Global Convertible":              { p1y:  34.49, p3y: 15.94, p5y:  6.81 },
+          "Goldman Sachs Commodity Enhanced":                  { p1y:  35.98, p3y: 14.30, p5y:  9.90 },
+          "BNPP Flexi I Absolute Return Convertible":          { p1y:   4.65, p3y:  6.46, p5y:  5.13 },
+          "BNPP Paribas Global Absolute Return":               { p1y:   0.32, p3y:  5.76, p5y:  5.35 },
+          "Top Stocks":                                        { p1y:   6.20, p3y:  7.56, p5y:  1.65 },
+          "Stock Small Caps":                                  { p1y:   8.12, p3y: 10.10, p5y:  4.49 },
+          "Erste Responsible Stock Global":                    { p1y:  22.15, p3y: 12.31, p5y:  6.77 },
+          "Fidelity World Fund":                               { p1y:  28.07, p3y: 19.12, p5y: 11.14 },
+          "Fidelity Global Dividend":                          { p1y:  12.73, p3y: 15.14, p5y: 11.19 },
+          "Goldman Sachs Global Sustainable Equity":           { p1y:   9.34, p3y:  7.15, p5y:  7.20 },
+          "Invesco Metaverse and AI Fund":                     { p1y:  61.71, p3y: 33.50, p5y:  null }, // inception 08.08.2022
+          "BlueSphere World Equity UCITS ETF Accum Hedged":    { p1y:   null, p3y:  null, p5y:  null }, // inception 15.04.2026
+          "Goldman Sachs Patrimonial Aggressive":              { p1y:  18.45, p3y: 12.48, p5y:  8.87 },
+          "Erste Responsible Stock America":                   { p1y:  23.44, p3y: 15.47, p5y:  7.80 },
+          "Fidelity America Fund":                             { p1y:  14.47, p3y: 11.15, p5y:  6.59 },
+          "Goldman Sachs US Enhanced Equity":                  { p1y:  21.45, p3y: 19.08, p5y: 11.54 },
+          "BNP US Growth":                                     { p1y:  34.38, p3y: 22.61, p5y: 13.33 },
+          "Sporotrend":                                        { p1y:  30.13, p3y: 28.98, p5y: 16.93 },
+          "Erste Responsible Stock Europe":                    { p1y:   6.62, p3y:  7.76, p5y:  3.94 },
+          "Goldman Sachs Central European Equity":             { p1y:  31.29, p3y: 31.58, p5y: 17.47 },
+          "BNP Euro Equity":                                   { p1y:   9.31, p3y:  9.40, p5y:  8.32 },
+          "BNP Nordic Small Cap":                              { p1y:  13.70, p3y: 16.07, p5y:  null }, // inception 02.05.2022
+          "Franklin Mutual European":                          { p1y:  14.79, p3y: 16.08, p5y: 12.30 },
+          "Fidelity Asian Special Situations":                 { p1y:  99.85, p3y: 33.12, p5y: 12.73 },
+          "BNPPF Asia ex-Japan Equity":                        { p1y:   null, p3y:  null, p5y:  null }, // inception 17.05.2013, data unavailable
+          "Templeton Asian Growth":                            { p1y:  66.70, p3y: 24.38, p5y:  5.74 },
+          "Goldman Sachs Japan Equity":                        { p1y:  41.47, p3y: 24.54, p5y: 20.28 },
+          "Erste Stock EM Global VT":                          { p1y:  50.88, p3y: 20.61, p5y:  4.97 },
+          "Erste Stock Biotec":                                { p1y:  25.75, p3y: -9.30, p5y:  2.46 },
+          "Erste Security Invest":                             { p1y:   null, p3y:  null, p5y:  null }, // inception 01.10.2025
+          "BNP Disruptive Technology":                         { p1y:  45.71, p3y: 24.72, p5y: 16.55 },
+          "Goldman Sachs Social Impact Equity":                { p1y: -13.64, p3y:  0.28, p5y: -0.07 },
+          "Allianz Artificial Intelligence":                   { p1y:  56.45, p3y: 25.21, p5y:  7.32 },
+          "Fidelity Global Industrials":                       { p1y:  32.15, p3y:  null, p5y:  null }, // inception 01.09.2000, data gap
+          "Erste WWF Stock Environment":                       { p1y:  46.56, p3y: -2.04, p5y: -7.67 },
+          "Goldman Sachs Global Climate & Environment":        { p1y:   9.91, p3y:  4.59, p5y:  4.93 },
+          "BNP Aqua":                                          { p1y:   4.05, p3y:  7.38, p5y:  6.66 },
+          "Goldman Sachs Global Impact Opportunities":         { p1y:  -1.60, p3y:  1.89, p5y:  0.58 },
+          "BNP Health Care Innovators":                        { p1y:  10.69, p3y:  null, p5y:  null }, // inception 12.01.2024
+        },
+        EUR: {
+          "BNP Paribas Funds Aqua":                            { p1y:   2.70, p3y:  null, p5y:  5.42 },
+          "Goldman Sachs Global Sustainable Equity":           { p1y:  -2.67, p3y:  null, p5y:  4.43 },
+          "BNP Paribas Funds US Growth":                       { p1y:  11.29, p3y:  null, p5y: 10.69 },
+          "BNP Paribas Funds Disruptive Technology":           { p1y:  19.55, p3y:  null, p5y: 12.18 },
+          "BNP Paribas Funds Euro Equity":                     { p1y:   2.93, p3y:  null, p5y:  6.04 },
+          "ERSTE Responsible Stock America VT":                { p1y:   3.90, p3y:  null, p5y:  5.09 },
+          "Fidelity Global Dividend":                          { p1y:   8.38, p3y:  null, p5y:  8.12 },
+          "Allianz Global Artificial Intelligence (EUR)":      { p1y:  25.09, p3y:  null, p5y:  3.18 },
+          "Fidelity European Multi Asset Income Fund":         { p1y:   2.88, p3y:  null, p5y:  2.37 },
+          "Fidelity Fund Global Income":                       { p1y:   4.13, p3y:  null, p5y:  0.58 },
+          "BNP Paribas Funds Euro Government Bond":            { p1y:   1.04, p3y:  null, p5y: -2.92 },
+          "BNP Paribas Funds Global Convertible":              { p1y:  17.41, p3y:  null, p5y:  1.02 },
+          "BNP Paribas Funds Euro Corporate Bond":             { p1y:   2.84, p3y:  null, p5y: -0.22 },
+          "Templeton Global Bond Fund":                        { p1y:   4.13, p3y:  null, p5y:  0.19 },
+          "Franklin Euro Government Bond Fund":                { p1y:  -1.14, p3y:  null, p5y: -0.23 },
+          "Fidelity Euro Bond Fund A-ACC-Euro":                { p1y:   2.14, p3y:  null, p5y: -2.49 },
+          "BNP PARIBAS FLEXI I ABS Return Convertible":        { p1y:   3.14, p3y:  null, p5y:  2.51 },
+          "BNPP Flexi I Flexible Convertible Bond":            { p1y:   2.71, p3y:  null, p5y:  2.07 },
+          "ERSTE PORTFOLIO BOND EUROPE":                       { p1y:   1.38, p3y:  null, p5y: -2.63 },
+          "ERSTE BOND EUROPE HIGH YIELD":                      { p1y:   3.77, p3y:  null, p5y:  1.89 },
+          "GOLDMAN SACHS USD GREEN BOND":                      { p1y:   3.03, p3y:  null, p5y:  null }, // inception EUR 08.12.2023
+          "Franklin European Corporate Bond Fund":             { p1y:   1.82, p3y:  null, p5y: -0.87 },
+          "BNP Paribas Funds Euro Money Market":               { p1y:   1.81, p3y:  null, p5y:  1.67 },
+          "ERSTE RESERVE DOLLAR":                              { p1y:  -7.58, p3y:  null, p5y:  3.74 },
+          "Goldman Sachs Euro Fixed Income":                   { p1y:   null, p3y:  null, p5y:  null },
+          "ESPA STOCK BIOTEC (VT) EUR":                        { p1y:   null, p3y:  null, p5y:  null },
+          "ESPA STOCK GLOBAL-EMERGING MARKETS (VT) EUR":       { p1y:   null, p3y:  null, p5y:  null },
+          "ESPA STOCK EUROPE-PROPERTY (VT) EUR":               { p1y:   null, p3y:  null, p5y:  null },
+        },
+        USD: {
+          "Allianz Artificial Intelligence":                   { p1y:  31.72, p3y:  null, p5y:  2.46 },
+          "BNP Aqua":                                          { p1y:   8.21, p3y:  null, p5y:  4.68 },
+          "BNP US Growth":                                     { p1y:  17.25, p3y:  null, p5y:  9.92 },
+          "BNP Disruptive Technology":                         { p1y:  25.95, p3y:  null, p5y: 11.04 },
+          "Erste Responsible Stock America":                   { p1y:  17.77, p3y:  null, p5y:  9.30 },
+          "Goldman Sachs US Enhanced Equity":                  { p1y:  14.03, p3y:  null, p5y: 10.86 },
+          "Franklin Technology":                               { p1y:  25.74, p3y:  null, p5y:  8.43 },
+          "Franklin U.S Oportunities":                         { p1y:   7.10, p3y:  null, p5y:  5.40 },
+          "Fidelity Global Dividend":                          { p1y:  12.91, p3y:  null, p5y:  8.25 },
+          "Fidelity Global Financial Services":                { p1y:   5.32, p3y:  null, p5y:  8.52 },
+          "Fidelity Global Quality Income":                    { p1y:  12.45, p3y:  null, p5y:  null }, // inception 27.03.2017, data gap
+          "Fidelity Global Bond":                              { p1y:   4.10, p3y:  null, p5y: -2.39 },
+          "SUSTAINABLE GLOBAL CORPORATE BOND":                 { p1y:   4.30, p3y:  null, p5y:  0.56 },
+          "BNPP Flexi I Flexible Convertible Bond":            { p1y:   4.98, p3y:  null, p5y:  3.85 },
+          "Franklin U.S. Government Fund":                     { p1y:   4.91, p3y:  null, p5y:  0.59 },
+          "Franklin U.S. Government Fund USD":                 { p1y:   4.91, p3y:  null, p5y:  0.59 }, // same fund, different share class
+          "GOLDMAN SACHS USD GREEN BOND":                      { p1y:   3.03, p3y:  null, p5y:  null }, // inception USD 10.08.2023
+          "Franklin U.S. Dollar Short-Term Money Market":      { p1y:   3.97, p3y:  null, p5y:  3.20 },
+          "BNP Paribas Funds USD Money Market":                { p1y:   3.97, p3y:  null, p5y:  3.37 },
+          "BNP Paribas Flexi I Commodities":                   { p1y:   null, p3y:  null, p5y:  null },
+          "Fidelity Funds - Global High Yield Fund A-ACC-USD": { p1y:   null, p3y:  null, p5y:  null },
+          "Fidelity Funds - Emerging Market Corporate Debt Fund A-ACC-USD": { p1y: null, p3y: null, p5y: null },
+        },
+      };
+
+      // Inception dates for funds requiring performance adjustment.
+      // Key format: "fundName:currency"
+      // Used for funds too young for full horizon OR for old funds with missing document data.
+      const FUND_INCEPTION = {
+        "GOLDMAN SACHS USD GREEN BOND:USD":                    new Date(2023,  7, 10), // 10.08.2023
+        "GOLDMAN SACHS USD GREEN BOND:EUR":                    new Date(2023, 11,  8), // 08.12.2023
+        "Fidelity Global Quality Income:USD":                  new Date(2017,  2, 27), // 27.03.2017
+        "Invesco Metaverse and AI Fund:CZK":                   new Date(2022,  7,  8), // 08.08.2022
+        "BlueSphere World Equity UCITS ETF Accum Hedged:CZK":  new Date(2026,  3, 15), // 15.04.2026
+        "BNP Nordic Small Cap:CZK":                            new Date(2022,  4,  2), // 02.05.2022
+        "BNPPF Asia ex-Japan Equity:CZK":                      new Date(2013,  4, 17), // 17.05.2013
+        "Erste Security Invest:CZK":                           new Date(2025,  9,  1), // 01.10.2025
+        "Fidelity Global Industrials:CZK":                     new Date(2000,  8,  1), // 01.09.2000
+        "BNP Health Care Innovators:CZK":                      new Date(2024,  0, 12), // 12.01.2024
+      };
+
+      // Reference date matching the CZK performance document
+      const PERF_REFERENCE_DATE = new Date(2026, 5, 3); // June 3, 2026
+
+      // Returns months between inceptionDate and PERF_REFERENCE_DATE.
+      // Returns 999 (effectively infinite) when no inception date is provided.
+      function monthsAvailable(inceptionDate) {
+        if (!inceptionDate) return 999;
+        const diff =
+          (PERF_REFERENCE_DATE.getFullYear() - inceptionDate.getFullYear()) * 12 +
+          (PERF_REFERENCE_DATE.getMonth() - inceptionDate.getMonth());
+        return Math.max(0, diff);
+      }
+
+      // Returns adjusted {p1y, p3y, p5y} for a single fund.
+      // For periods before the fund's inception, performance is counted as 0.
+      // rawPerf: object from FUND_PERF_DATA or null if not available.
+      // months:  months the fund has been available up to PERF_REFERENCE_DATE.
+      function getAdjustedFundPerf(rawPerf, months) {
+        if (!rawPerf) return { p1y: 0, p3y: 0, p5y: 0 };
+        const r1 = rawPerf.p1y, r3 = rawPerf.p3y, r5 = rawPerf.p5y;
+
+        // 1Y
+        const p1y = (months >= 12 && r1 !== null) ? r1 : 0;
+
+        // 3Y: use document value; blend or approximate when unavailable
+        let p3y;
+        if (r3 !== null) {
+          p3y = r3;
+        } else if (months >= 36 && r1 !== null) {
+          p3y = r1; // old fund, only 1Y in doc – use as proxy
+        } else if (months >= 12 && r1 !== null) {
+          // 12–35 months: 0% for (36-12) months + 1Y for 12 months
+          p3y = (Math.pow(1 + r1 / 100, 12 / 36) - 1) * 100;
+        } else {
+          p3y = 0;
+        }
+
+        // 5Y: use document value; blend or approximate when unavailable
+        let p5y;
+        if (r5 !== null) {
+          p5y = r5;
+        } else if (months >= 36 && r3 !== null) {
+          // 36–59 months: 0% for (60-36) months + 3Y for 36 months
+          p5y = (Math.pow(1 + r3 / 100, 36 / 60) - 1) * 100;
+        } else if (months >= 12 && r1 !== null) {
+          // 12–35 months: 0% for (60-12) months + 1Y for 12 months
+          p5y = (Math.pow(1 + r1 / 100, 12 / 60) - 1) * 100;
+        } else {
+          p5y = 0;
+        }
+
+        return { p1y, p3y, p5y };
+      }
+
+      // Computes portfolio-level performance (1Y/3Y/5Y p.a.) from actual fund data.
+      // Funds with no document data and not in FUND_INCEPTION are excluded from
+      // the weighted average (rather than counted as 0) to avoid distortion.
+      // Young funds (in FUND_INCEPTION) are always included with 0-padded adjustment.
+      function computePortfolioPerf(funds, currency) {
+        if (!funds || !funds.length) {
+          return { performance1y: 0, performance3y: 0, performance5y: 0 };
+        }
+        let wp1y = 0, tw1y = 0;
+        let wp3y = 0, tw3y = 0;
+        let wp5y = 0, tw5y = 0;
+
+        funds.forEach((fund) => {
+          const w = Number(fund.weight) || 0;
+          if (w <= 0) return;
+          const name = (fund.name || "").trim();
+          const rawPerf = (FUND_PERF_DATA[currency] || {})[name] || null;
+          const inceptionKey = `${name}:${currency}`;
+          const isListedInception = Object.prototype.hasOwnProperty.call(FUND_INCEPTION, inceptionKey);
+          const months = monthsAvailable(isListedInception ? FUND_INCEPTION[inceptionKey] : null);
+          const hasAnyData = rawPerf && (rawPerf.p1y !== null || rawPerf.p3y !== null || rawPerf.p5y !== null);
+
+          // Exclude funds with no data at all that aren't explicitly listed
+          if (!hasAnyData && !isListedInception) return;
+
+          const adj = getAdjustedFundPerf(rawPerf, months);
+          wp1y += adj.p1y * w; tw1y += w;
+          wp3y += adj.p3y * w; tw3y += w;
+          wp5y += adj.p5y * w; tw5y += w;
+        });
+
+        return {
+          performance1y: tw1y > 0 ? wp1y / tw1y : 0,
+          performance3y: tw3y > 0 ? wp3y / tw3y : 0,
+          performance5y: tw5y > 0 ? wp5y / tw5y : 0,
+        };
+      }
+
       // Inflation benchmark series (monthly)
       // prettier-ignore
       const BENCHMARK_INFLATION = [
@@ -1847,10 +2075,12 @@
         const stats = useMemo(() => {
           const out = {};
           PRESET_PORTFOLIOS.forEach((p) => {
-            out[p.id] = computeStats(p.allocation, initialInvestment);
+            const funds = getTemplateFundsForCurrency(p, currency);
+            const portPerf = computePortfolioPerf(funds, currency);
+            out[p.id] = { ...computeStats(p.allocation, initialInvestment), ...portPerf };
           });
           return out;
-        }, [initialInvestment]);
+        }, [initialInvestment, currency]);
         const selected = PRESET_PORTFOLIOS.find((p) => p.id === selectedId) || null;
         useEffect(() => {
           if (!selected) {
@@ -2097,7 +2327,10 @@
             return acc;
           }, { bonds: 0, stocks: 0, alternatives: 0 });
         }, [funds]);
-        const customStats = useMemo(() => computeStats(detailAllocation, initialInvestment), [detailAllocation, initialInvestment]);
+        const customStats = useMemo(() => {
+          const portPerf = computePortfolioPerf(funds, currency);
+          return { ...computeStats(detailAllocation, initialInvestment), ...portPerf };
+        }, [detailAllocation, initialInvestment, funds, currency]);
         const customBaseStrategyId = useMemo(() => {
           return activeTemplate !== "custom" ? activeTemplate : null;
         }, [activeTemplate]);
