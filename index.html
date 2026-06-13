@@ -3169,7 +3169,8 @@
             <header className="sticky top-[37px] z-40 bg-ep-gradient text-white shadow-premium">
               <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
               <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+                  <div className="flex items-center gap-4">
                   <button
                     type="button"
                     onClick={onBack}
@@ -3182,21 +3183,20 @@
                   <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5">
                     <BarChart3Icon size={20} className="text-ep-gold" />
                   </div>
-                  <div className="leading-tight">
-                    <div className="font-serif text-xl font-semibold tracking-[0.14em] text-white">
-                      {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <div className="text-[11px] uppercase tracking-[0.24em] text-ep-gold/90 leading-snug">
-                        <span className="block">Není investice</span>
-                        <span className="block">jako investice</span>
+                    <div className="leading-tight">
+                      <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
+                        {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
+                          Není investice jako investice
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end lg:flex-1">
 
-                <div className="flex flex-col gap-2 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-end lg:flex-1">
-                  <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[380px]">
+                    <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Jednorázová investice
@@ -3237,7 +3237,7 @@
                     </div>
                   </label>
 
-                  <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[380px]">
+                    <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Pravidelná investice
@@ -3278,7 +3278,7 @@
                     </div>
                   </label>
 
-                  <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1" role="tablist" aria-label="Volba měny">
+                    <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur lg:self-center" role="tablist" aria-label="Volba měny">
                     {["CZK", "EUR", "USD"].map((c) => {
                       const active = currency === c;
                       return (
@@ -3288,6 +3288,7 @@
                         </button>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               </div>
