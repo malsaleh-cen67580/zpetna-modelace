@@ -1585,6 +1585,15 @@
         const [viewMode, setViewMode] = useState("value");
         const [compareStrategyIds, setCompareStrategyIds] = useState([]);
         const [showSleeves, setShowSleeves] = useState(false);
+        const [horizonMonths, setHorizonMonths] = useState(null);
+        const HORIZON_OPTIONS = [
+          { label: "1R", months: 12, title: "1 rok" },
+          { label: "2R", months: 24, title: "2 roky" },
+          { label: "3R", months: 36, title: "3 roky" },
+          { label: "4R", months: 48, title: "4 roky" },
+          { label: "5R", months: 60, title: "5 let" },
+          { label: "Vše", months: null, title: "Celé dostupné období" },
+        ];
         const effectiveMonthlyContribution = monthlyContribution;
         useEffect(() => {
           setCompareStrategyIds([]);
@@ -1636,10 +1645,14 @@
             return { ...row, ...extra };
           });
         }, [rawData, initialInvestment, viewMode, compareStrategyIds, allComparisonSeriesMap]);
-        const xTicks = useMemo(() => data.filter((_, i) => i % 6 === 0).map((d) => d.date), [data]);
+        const displayData = useMemo(
+          () => (horizonMonths ? data.slice(-horizonMonths) : data),
+          [data, horizonMonths]
+        );
+        const xTicks = useMemo(() => displayData.filter((_, i) => i % 6 === 0).map((d) => d.date), [displayData]);
         const portfolioKey = viewMode === "percent" ? "portfolioPct" : "portfolio";
         const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
-        const finalValue = data.length ? data[data.length - 1][portfolioKey] : initialInvestment;
+        const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
         const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
         const recurringContributed = lastRow ? lastRow.recurringContributed : 0;
@@ -1754,9 +1767,29 @@
                 <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(recurringContributed)}</div>
               </div>
             </div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Horizont</div>
+              <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Výběr horizontu grafu">
+                {HORIZON_OPTIONS.map((opt) => {
+                  const active = horizonMonths === opt.months;
+                  return (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      title={opt.title}
+                      onClick={() => setHorizonMonths(opt.months)}
+                      aria-pressed={active}
+                      className={"rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-all " + (active ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="h-[320px] w-full md:h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                <AreaChart data={displayData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id={portfolioGradientId} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#1e5fb8" stopOpacity={0.55} />
