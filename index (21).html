@@ -1586,6 +1586,14 @@
         const [compareStrategyIds, setCompareStrategyIds] = useState([]);
         const [showSleeves, setShowSleeves] = useState(false);
         const [horizonMonths, setHorizonMonths] = useState(null);
+        const [customDateFrom, setCustomDateFrom] = useState("");
+        const [customDateTo, setCustomDateTo] = useState("");
+        const TIMELINE_MIN = TIMELINE.length > 0
+          ? `${TIMELINE[0].date.getFullYear()}-${String(TIMELINE[0].date.getMonth() + 1).padStart(2, "0")}`
+          : "2021-01";
+        const TIMELINE_MAX = TIMELINE.length > 0
+          ? `${TIMELINE[TIMELINE.length - 1].date.getFullYear()}-${String(TIMELINE[TIMELINE.length - 1].date.getMonth() + 1).padStart(2, "0")}`
+          : "";
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "1 rok" },
           { label: "2R", months: 24, title: "2 roky" },
@@ -1593,6 +1601,7 @@
           { label: "4R", months: 48, title: "4 roky" },
           { label: "5R", months: 60, title: "5 let" },
           { label: "Vše", months: null, title: "Celé dostupné období" },
+          { label: "Vlastní", months: "custom", title: "Vlastní rozsah dat" },
         ];
         const effectiveMonthlyContribution = monthlyContribution;
         useEffect(() => {
@@ -1645,10 +1654,14 @@
             return { ...row, ...extra };
           });
         }, [rawData, initialInvestment, viewMode, compareStrategyIds, allComparisonSeriesMap]);
-        const displayData = useMemo(
-          () => (horizonMonths ? data.slice(-horizonMonths) : data),
-          [data, horizonMonths]
-        );
+        const displayData = useMemo(() => {
+          if (horizonMonths === "custom") {
+            const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
+            const toTs = customDateTo ? (() => { const d = new Date(customDateTo + "-01"); d.setMonth(d.getMonth() + 1); return d.getTime() - 1; })() : Infinity;
+            return data.filter((row) => row.ts >= fromTs && row.ts <= toTs);
+          }
+          return horizonMonths ? data.slice(-horizonMonths) : data;
+        }, [data, horizonMonths, customDateFrom, customDateTo]);
         const xTicks = useMemo(() => displayData.filter((_, i) => i % 6 === 0).map((d) => d.date), [displayData]);
         const portfolioKey = viewMode === "percent" ? "portfolioPct" : "portfolio";
         const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
@@ -1767,25 +1780,59 @@
                 <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(recurringContributed)}</div>
               </div>
             </div>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Horizont</div>
-              <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Výběr horizontu grafu">
-                {HORIZON_OPTIONS.map((opt) => {
-                  const active = horizonMonths === opt.months;
-                  return (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      title={opt.title}
-                      onClick={() => setHorizonMonths(opt.months)}
-                      aria-pressed={active}
-                      className={"rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-all " + (active ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
+            <div className="mb-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Horizont</div>
+                <div className="inline-flex flex-wrap items-center rounded-full border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Výběr horizontu grafu">
+                  {HORIZON_OPTIONS.map((opt) => {
+                    const active = horizonMonths === opt.months;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        title={opt.title}
+                        onClick={() => {
+                          setHorizonMonths(opt.months);
+                          if (opt.months === "custom") {
+                            if (!customDateFrom) setCustomDateFrom(TIMELINE_MIN);
+                            if (!customDateTo) setCustomDateTo(TIMELINE_MAX);
+                          }
+                        }}
+                        aria-pressed={active}
+                        className={"rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-all " + (active ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+              {horizonMonths === "custom" && (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    Od
+                    <input
+                      type="month"
+                      value={customDateFrom}
+                      min={TIMELINE_MIN}
+                      max={customDateTo || TIMELINE_MAX}
+                      onChange={(e) => setCustomDateFrom(e.target.value)}
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-800 focus:border-ep-blue focus:outline-none focus:ring-1 focus:ring-ep-blue/30"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    Do
+                    <input
+                      type="month"
+                      value={customDateTo}
+                      min={customDateFrom || TIMELINE_MIN}
+                      max={TIMELINE_MAX}
+                      onChange={(e) => setCustomDateTo(e.target.value)}
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-800 focus:border-ep-blue focus:outline-none focus:ring-1 focus:ring-ep-blue/30"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
             <div className="h-[320px] w-full md:h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
