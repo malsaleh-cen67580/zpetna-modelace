@@ -197,10 +197,6 @@
         PieChart,
         Pie,
         Cell,
-        BarChart,
-        Bar,
-        LineChart,
-        Line,
         ReferenceLine,
       } = Recharts;
 
@@ -1348,7 +1344,7 @@
       /* ------------------------------------------------------------------ */
       /*  Header                                                             */
       /* ------------------------------------------------------------------ */
-      function Header() {
+      function Header({ onNavigateSubapp, activeScreen = "zpetna-modelace" }) {
         const {
           currency,
           setCurrency,
@@ -1425,6 +1421,35 @@
                         );
                       })}
                     </div>
+                    {onNavigateSubapp && (
+                      <div
+                        className="mt-1.5 inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
+                        role="tablist"
+                        aria-label="Volba podaplikace"
+                      >
+                        {[
+                          { key: "zpetna-modelace", label: "Zpětná modelace" },
+                          { key: "neni-investice", label: "Není investice jako investice" },
+                        ].map(({ key, label }) => {
+                          const active = activeScreen === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => onNavigateSubapp(key)}
+                              className={
+                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-all " +
+                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/70 hover:text-white")
+                              }
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2725,11 +2750,11 @@
         );
       }
 
-      function Index() {
+      function Index({ onNavigate }) {
         const { appMode } = useInvestment();
         return (
           <div className="min-h-screen">
-            <Header />
+            <Header onNavigateSubapp={onNavigate} activeScreen="zpetna-modelace" />
             <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-10 md:py-12">
               <section className="mb-8 md:mb-10">
                 <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-ep-gradient p-6 text-white shadow-premium md:p-10">
@@ -2947,14 +2972,26 @@
       /* ------------------------------------------------------------------ */
       /*  Není investice jako investice — fund performance explorer          */
       /* ------------------------------------------------------------------ */
-      function NeniInvesticeApp({ onBack }) {
+      function NeniInvesticeApp({ onBack, onNavigate }) {
         const [currency, setCurrencyNI] = useState("CZK");
         const [category, setCategory] = useState("Vše");
         const [search, setSearch] = useState("");
         const [sortKey, setSortKey] = useState("p1y");
         const [sortDir, setSortDir] = useState("desc");
         const [selectedFunds, setSelectedFunds] = useState([]);
-        const [chartTab, setChartTab] = useState("vyvoj"); // "vyvoj" | "pa"
+        const [viewMode, setViewMode] = useState("value");
+        const [horizonMonths, setHorizonMonths] = useState(60);
+        const TIMELINE_MIN =
+          TIMELINE.length > 0
+            ? `${TIMELINE[0].ts.getFullYear()}-${String(TIMELINE[0].ts.getMonth() + 1).padStart(2, "0")}`
+            : "";
+        const TIMELINE_MAX =
+          TIMELINE.length > 0
+            ? `${TIMELINE[TIMELINE.length - 1].ts.getFullYear()}-${String(TIMELINE[TIMELINE.length - 1].ts.getMonth() + 1).padStart(2, "0")}`
+            : "";
+        const [customDateFrom, setCustomDateFrom] = useState(TIMELINE_MIN);
+        const [customDateTo, setCustomDateTo] = useState(TIMELINE_MAX);
+        const INITIAL_SIM_VALUE = 1000;
 
         const perfData = FUND_PERF_DATA[currency] || {};
 
@@ -3013,31 +3050,66 @@
           [allFunds, selectedFunds]
         );
 
-        // Simulated growth chart data: y=100 at year 0, then value at 1/3/5 based on p.a.
+        const formatMoney = useMemo(() => {
+          const locale = currency === "CZK" ? "cs-CZ" : currency === "EUR" ? "de-DE" : "en-US";
+          return (amount, opts) =>
+            new Intl.NumberFormat(locale, {
+              style: "currency",
+              currency,
+              maximumFractionDigits: 0,
+              notation: opts && opts.compact ? "compact" : "standard",
+            }).format(amount);
+        }, [currency]);
+
         const growthData = useMemo(() => {
-          const pts = [
-            { year: "Výchozí" },
-            { year: "1 rok" },
-            { year: "3 roky" },
-            { year: "5 let" },
-          ];
-          compFunds.forEach((f, idx) => {
-            pts[0][f.name] = 100;
-            pts[1][f.name] = f.p1y !== null ? +(100 * Math.pow(1 + f.p1y / 100, 1)).toFixed(2) : null;
-            pts[2][f.name] = f.p3y !== null ? +(100 * Math.pow(1 + f.p3y / 100, 3)).toFixed(2) : null;
-            pts[3][f.name] = f.p5y !== null ? +(100 * Math.pow(1 + f.p5y / 100, 5)).toFixed(2) : null;
+          return TIMELINE.map((point, index) => {
+            const row = {
+              date: point.date,
+              ts: point.ts.getTime(),
+            };
+            compFunds.forEach((f) => {
+              const annualRate = f.p5y ?? f.p3y ?? f.p1y;
+              if (annualRate === null || annualRate === undefined) {
+                row[f.name] = null;
+                row[`${f.name}Pct`] = null;
+                return;
+              }
+              const value = INITIAL_SIM_VALUE * Math.pow(1 + annualRate / 100, (index + 1) / 12);
+              row[f.name] = +value.toFixed(2);
+              row[`${f.name}Pct`] = +(((value / INITIAL_SIM_VALUE) - 1) * 100).toFixed(2);
+            });
+            return row;
           });
-          return pts;
         }, [compFunds]);
 
-        // Bar chart data for p.a. comparison
-        const barData = useMemo(() => {
-          return [
-            { horizon: "1 rok p.a.", ...Object.fromEntries(compFunds.map((f) => [f.name, f.p1y])) },
-            { horizon: "3 roky p.a.", ...Object.fromEntries(compFunds.map((f) => [f.name, f.p3y])) },
-            { horizon: "5 let p.a.", ...Object.fromEntries(compFunds.map((f) => [f.name, f.p5y])) },
-          ];
-        }, [compFunds]);
+        const displayData = useMemo(() => {
+          if (horizonMonths === "custom") {
+            const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
+            const toTs = customDateTo
+              ? (() => {
+                  const d = new Date(customDateTo + "-01");
+                  d.setMonth(d.getMonth() + 1);
+                  return d.getTime() - 1;
+                })()
+              : Infinity;
+            return growthData.filter((row) => row.ts >= fromTs && row.ts <= toTs);
+          }
+          return horizonMonths ? growthData.slice(-horizonMonths) : growthData;
+        }, [growthData, horizonMonths, customDateFrom, customDateTo]);
+
+        const xTicks = useMemo(
+          () => displayData.filter((_, i) => i % 6 === 0).map((d) => d.date),
+          [displayData]
+        );
+        const finalRow = displayData.length ? displayData[displayData.length - 1] : null;
+        const chartLabelValue = viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota";
+        const HORIZON_OPTIONS = [
+          { label: "1R", months: 12, title: "Poslední rok" },
+          { label: "3R", months: 36, title: "Poslední 3 roky" },
+          { label: "5R", months: 60, title: "5 let" },
+          { label: "Vše", months: null, title: "Celé dostupné období" },
+          { label: "Vlastní", months: "custom", title: "Vlastní rozsah dat" },
+        ];
 
         const SortArrow = ({ k }) => {
           if (sortKey !== k) return <span className="text-slate-300 ml-0.5">↕</span>;
@@ -3080,6 +3152,31 @@
                     <div className="text-[11px] uppercase tracking-[0.28em] text-ep-gold/90">
                       Není investice jako investice
                     </div>
+                    {onNavigate && (
+                      <div className="mt-1.5 inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5" role="tablist" aria-label="Volba podaplikace">
+                        {[
+                          { key: "zpetna-modelace", label: "Zpětná modelace" },
+                          { key: "neni-investice", label: "Není investice jako investice" },
+                        ].map((item) => {
+                          const active = item.key === "neni-investice";
+                          return (
+                            <button
+                              key={item.key}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => onNavigate(item.key)}
+                              className={
+                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-all " +
+                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/70 hover:text-white")
+                              }
+                            >
+                              {item.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1" role="tablist" aria-label="Volba měny">
@@ -3108,7 +3205,6 @@
                     <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/80 md:text-base">
                       Porovnejte historické výkonnosti fondů z nabídky Erste Premier.
                       Vyberte fondy pro detailní srovnání a zjistěte, jak se od sebe skutečně liší.
-                      Data k&nbsp;{currency === "CZK" ? "3. 6. 2026" : "20. 3. 2026"}.
                     </p>
                   </div>
                 </div>
@@ -3228,25 +3324,46 @@
                 {/* Comparison charts */}
                 {compFunds.length > 0 && (
                   <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-premium fade-in md:p-7">
-                    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
                         <h3 className="text-lg font-semibold ep-text-navy">Srovnání vybraných fondů</h3>
                         <p className="text-sm text-slate-500">
-                          {chartTab === "vyvoj"
-                            ? "Simulovaný vývoj 100 Kč/€/$ investovaných před 5 lety na základě historické výkonnosti p.a."
-                            : "Průměrný roční výnos (p.a.) za 1, 3 a 5 let."}
+                          Simulovaný vývoj 1&nbsp;000 {currency} investovaných před 5 lety na základě historické výkonnosti p.a.
                         </p>
                       </div>
-                      <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ grafu">
-                        {[{ id: "vyvoj", label: "Simulovaný vývoj" }, { id: "pa", label: "Výkonnost p.a." }].map((opt) => (
-                          <button key={opt.id} type="button" role="tab" aria-selected={chartTab === opt.id}
-                            onClick={() => setChartTab(opt.id)}
+                      <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
+                        {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((opt) => (
+                          <button key={opt.id} type="button" role="tab" aria-selected={viewMode === opt.id}
+                            onClick={() => setViewMode(opt.id)}
                             className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide transition-all " +
-                              (chartTab === opt.id ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}>
+                              (viewMode === opt.id ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}>
                             {opt.label}
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      {compFunds.map((f, idx) => {
+                        const valueKey = viewMode === "percent" ? `${f.name}Pct` : f.name;
+                        const finalValue = finalRow ? finalRow[valueKey] : null;
+                        return (
+                          <div key={f.name} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
+                              <span className="truncate">{f.name}</span>
+                            </div>
+                            <div className="mt-1 text-base font-semibold ep-text-navy">
+                              {finalValue === null || finalValue === undefined
+                                ? "–"
+                                : viewMode === "percent"
+                                ? `${finalValue >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %`
+                                : formatMoney(finalValue)}
+                            </div>
+                            <div className="text-[10px] uppercase tracking-widest text-slate-400">{chartLabelValue}</div>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Legend */}
@@ -3259,59 +3376,109 @@
                       ))}
                     </div>
 
-                    <div className="h-[340px] w-full md:h-[400px]">
-                      {chartTab === "vyvoj" ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={growthData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                            <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
-                            <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
-                            <YAxis tickFormatter={(v) => v.toFixed(0)} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={54} />
-                            <Tooltip
-                              formatter={(v, name) => v !== null ? [`${Number(v).toFixed(1)}`, name] : ["–", name]}
-                              labelStyle={{ fontWeight: 600, color: "#0a1e3f", marginBottom: 4 }}
-                              contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                    <div className="mb-3 flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">Horizont</div>
+                        <div className="inline-flex flex-wrap items-center rounded-full border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Výběr horizontu grafu">
+                          {HORIZON_OPTIONS.map((opt) => {
+                            const active = horizonMonths === opt.months;
+                            return (
+                              <button
+                                key={opt.label}
+                                type="button"
+                                title={opt.title}
+                                onClick={() => {
+                                  setHorizonMonths(opt.months);
+                                  if (opt.months === "custom") {
+                                    if (!customDateFrom) setCustomDateFrom(TIMELINE_MIN);
+                                    if (!customDateTo) setCustomDateTo(TIMELINE_MAX);
+                                  }
+                                }}
+                                aria-pressed={active}
+                                className={"rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-all " + (active ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {horizonMonths === "custom" && (
+                        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                            Od
+                            <input
+                              type="month"
+                              value={customDateFrom}
+                              min={TIMELINE_MIN}
+                              max={customDateTo || TIMELINE_MAX}
+                              onChange={(e) => setCustomDateFrom(e.target.value)}
+                              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-800 focus:border-ep-blue focus:outline-none focus:ring-1 focus:ring-ep-blue/30"
                             />
-                            <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
-                            {compFunds.map((f, idx) => (
-                              <Line
-                                key={f.name}
-                                type="monotone"
-                                dataKey={f.name}
-                                name={f.name}
-                                stroke={NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length]}
-                                strokeWidth={2.5}
-                                dot={{ r: 5, fill: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length], strokeWidth: 0 }}
-                                connectNulls={false}
-                                activeDot={{ r: 6 }}
-                              />
-                            ))}
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={barData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                            <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
-                            <XAxis dataKey="horizon" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
-                            <YAxis tickFormatter={(v) => `${v > 0 ? "+" : ""}${Number(v).toFixed(0)} %`} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={62} />
-                            <Tooltip
-                              formatter={(v, name) => v !== null ? [`${v > 0 ? "+" : ""}${Number(v).toFixed(2)} %`, name] : ["–", name]}
-                              labelStyle={{ fontWeight: 600, color: "#0a1e3f", marginBottom: 4 }}
-                              contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                          </label>
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                            Do
+                            <input
+                              type="month"
+                              value={customDateTo}
+                              min={customDateFrom || TIMELINE_MIN}
+                              max={TIMELINE_MAX}
+                              onChange={(e) => setCustomDateTo(e.target.value)}
+                              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-800 focus:border-ep-blue focus:outline-none focus:ring-1 focus:ring-ep-blue/30"
                             />
-                            <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
-                            {compFunds.map((f, idx) => (
-                              <Bar
-                                key={f.name}
-                                dataKey={f.name}
-                                name={f.name}
-                                fill={NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length]}
-                                radius={[4, 4, 0, 0]}
-                                maxBarSize={40}
-                              />
-                            ))}
-                          </BarChart>
-                        </ResponsiveContainer>
+                          </label>
+                        </div>
                       )}
+                    </div>
+
+                    <div className="h-[340px] w-full md:h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={displayData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                          <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
+                          <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
+                          <YAxis
+                            tickFormatter={(v) =>
+                              viewMode === "percent"
+                                ? `${Number(v).toFixed(0)} %`
+                                : formatMoney(v, { compact: true }).replace(/\s/g, "")
+                            }
+                            tick={{ fontSize: 11, fill: "#64748b" }}
+                            tickLine={false}
+                            axisLine={{ stroke: "rgba(148,163,184,0.3)" }}
+                            width={70}
+                          />
+                          <Tooltip
+                            formatter={(v, name) =>
+                              v !== null
+                                ? [
+                                    viewMode === "percent"
+                                      ? `${Number(v).toFixed(2)} %`
+                                      : formatMoney(v),
+                                    name,
+                                  ]
+                                : ["–", name]
+                            }
+                            labelStyle={{ fontWeight: 600, color: "#0a1e3f", marginBottom: 4 }}
+                            contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                          />
+                          <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
+                          <ReferenceLine y={viewMode === "percent" ? 0 : INITIAL_SIM_VALUE} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
+                          {compFunds.map((f, idx) => (
+                            <Area
+                              key={f.name}
+                              type="monotone"
+                              dataKey={viewMode === "percent" ? `${f.name}Pct` : f.name}
+                              name={f.name}
+                              stroke={NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length]}
+                              strokeWidth={2.8}
+                              fill="transparent"
+                              activeDot={{ r: 4 }}
+                              connectNulls={false}
+                              isAnimationActive={false}
+                            />
+                          ))}
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
 
                     {/* Summary stats for selected funds */}
@@ -3369,10 +3536,10 @@
         }, []);
 
         if (screen === "home") return <HomeScreen onNavigate={setScreen} />;
-        if (screen === "neni-investice") return <NeniInvesticeApp onBack={() => setScreen("home")} />;
+        if (screen === "neni-investice") return <NeniInvesticeApp onBack={() => setScreen("home")} onNavigate={setScreen} />;
         return (
           <InvestmentProvider>
-            <Index />
+            <Index onNavigate={setScreen} />
           </InvestmentProvider>
         );
       }
