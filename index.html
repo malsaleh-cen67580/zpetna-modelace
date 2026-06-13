@@ -5171,12 +5171,18 @@
         }, [currency]);
 
         const growthData = useMemo(() => {
-          // Pre-compute Sporoinvest variable-rate value series once (daily returns, monthly contributions)
-          const sporoinvestSeries = computeVariableRateSeries(
-            initialInvestment,
-            monthlyContribution,
-            SPOROINVEST_DAILY_RETURNS
-          );
+          // Pre-compute real NAV-based series for all funds that have daily return data
+          const realSeries = {};
+          compFunds.forEach((f) => {
+            const returns = FUND_DAILY_RETURNS[f.name];
+            if (returns) {
+              realSeries[f.name] = computeVariableRateSeries(
+                initialInvestment,
+                monthlyContribution,
+                returns
+              );
+            }
+          });
           return TIMELINE.map((point, index) => {
             const row = {
               date: point.label,
@@ -5185,9 +5191,9 @@
             // monthsSinceStart: number of full calendar months elapsed since the series start
             const monthsSinceStart = point.monthsSinceStart;
             compFunds.forEach((f) => {
-              // Use real NAV-based daily growth for Sporoinvest
-              if (f.name === "Sporoinvest") {
-                const value = sporoinvestSeries[index] ?? null;
+              // Use real NAV-based daily growth when available
+              if (realSeries[f.name]) {
+                const value = realSeries[f.name][index] ?? null;
                 const investedBase = initialInvestment + monthlyContribution * monthsSinceStart;
                 row[f.name] = value !== null ? +value.toFixed(2) : null;
                 row[`${f.name}Pct`] =
