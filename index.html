@@ -1344,6 +1344,12 @@
       /* ------------------------------------------------------------------ */
       /*  Header                                                             */
       /* ------------------------------------------------------------------ */
+      function normalizeNumericInput(value) {
+        const digits = String(value).replace(/[^\d]/g, "");
+        if (!digits) return 0;
+        return Number(digits.replace(/^0+(?=\d)/, ""));
+      }
+
       function AppSwitchBar({ activeScreen, onNavigate }) {
         return (
           <div className="sticky top-0 z-50 border-b border-white/15 bg-ep-navy/95 text-white backdrop-blur">
@@ -1385,12 +1391,6 @@
           setAppMode,
         } = useInvestment();
 
-        const normalizeNumericInput = (value) => {
-          const digits = String(value).replace(/[^\d]/g, "");
-          if (!digits) return 0;
-          return Number(digits.replace(/^0+(?=\d)/, ""));
-        };
-
         const handleAmount = (e) => {
           const parsed = normalizeNumericInput(e.target.value);
           if (!Number.isFinite(parsed)) return;
@@ -1419,36 +1419,38 @@
                     <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
                       {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
                     </div>
-                    <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
-                      Zpětné modelace
-                    </div>
-                    <div
-                      className="mt-1.5 inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
-                      role="tablist"
-                      aria-label="Volba módu"
-                    >
-                      {[
-                        { key: "erste-premier", label: "EP" },
-                        { key: "mass-affluent", label: "MA" },
-                      ].map(({ key, label }) => {
-                        const active = appMode === key;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            title={key === "erste-premier" ? "Erste Premier" : "Mass Affluent"}
-                            onClick={() => setAppMode(key)}
-                            className={
-                              "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wider transition-all " +
-                              (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/60 hover:text-white")
-                            }
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
+                        Zpětné modelace
+                      </div>
+                      <div
+                        className="inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
+                        role="tablist"
+                        aria-label="Volba módu"
+                      >
+                        {[
+                          { key: "erste-premier", label: "EP" },
+                          { key: "mass-affluent", label: "MMA" },
+                        ].map(({ key, label }) => {
+                          const active = appMode === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              title={key === "erste-premier" ? "Erste Premier" : "Mass Affluent"}
+                              onClick={() => setAppMode(key)}
+                              className={
+                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wider transition-all " +
+                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/60 hover:text-white")
+                              }
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2974,7 +2976,16 @@
       /*  Není investice jako investice — fund performance explorer          */
       /* ------------------------------------------------------------------ */
       function NeniInvesticeApp({ onBack, onNavigate }) {
-        const [currency, setCurrencyNI] = useState("CZK");
+        const {
+          currency,
+          setCurrency,
+          initialInvestment,
+          setInitialInvestment,
+          monthlyContribution,
+          setMonthlyContribution,
+          appMode,
+          setAppMode,
+        } = useInvestment();
         const [category, setCategory] = useState("Vše");
         const [search, setSearch] = useState("");
         const [sortKey, setSortKey] = useState("p1y");
@@ -2992,7 +3003,8 @@
             : "";
         const [customDateFrom, setCustomDateFrom] = useState(TIMELINE_MIN);
         const [customDateTo, setCustomDateTo] = useState(TIMELINE_MAX);
-        const INITIAL_SIM_VALUE = 1000;
+        const minStep = currency === "CZK" ? 50000 : 2000;
+        const monthlyStep = currency === "CZK" ? 5000 : 200;
 
         const perfData = FUND_PERF_DATA[currency] || {};
 
@@ -3075,13 +3087,21 @@
                 row[`${f.name}Pct`] = null;
                 return;
               }
-              const value = INITIAL_SIM_VALUE * Math.pow(1 + annualRate / 100, (index + 1) / 12);
+              const monthlyRate = Math.pow(1 + annualRate / 100, 1 / 12) - 1;
+              const monthCount = index + 1;
+              const value =
+                monthlyRate === 0
+                  ? initialInvestment + monthlyContribution * monthCount
+                  : initialInvestment * Math.pow(1 + monthlyRate, monthCount) +
+                    monthlyContribution * ((Math.pow(1 + monthlyRate, monthCount) - 1) / monthlyRate);
+              const investedBase = initialInvestment + monthlyContribution * monthCount;
               row[f.name] = +value.toFixed(2);
-              row[`${f.name}Pct`] = +(((value / INITIAL_SIM_VALUE) - 1) * 100).toFixed(2);
+              row[`${f.name}Pct`] =
+                investedBase > 0 ? +(((value / investedBase) - 1) * 100).toFixed(2) : null;
             });
             return row;
           });
-        }, [compFunds]);
+        }, [compFunds, initialInvestment, monthlyContribution]);
 
         const displayData = useMemo(() => {
           if (horizonMonths === "custom") {
@@ -3133,7 +3153,7 @@
             <AppSwitchBar activeScreen="neni-investice" onNavigate={onNavigate} />
             <header className="sticky top-[37px] z-40 bg-ep-gradient text-white shadow-premium">
               <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
-              <div className="relative mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-7">
+              <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -3149,23 +3169,138 @@
                   </div>
                   <div className="leading-tight">
                     <div className="font-serif text-xl font-semibold tracking-[0.14em] text-white">
-                      ERSTE&nbsp;PREMIER
+                      {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
                     </div>
-                    <div className="text-[11px] uppercase tracking-[0.28em] text-ep-gold/90">
-                      Není investice jako investice
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="text-[11px] uppercase tracking-[0.28em] text-ep-gold/90">
+                        Není investice jako investice
+                      </div>
+                      <div
+                        className="inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
+                        role="tablist"
+                        aria-label="Volba módu"
+                      >
+                        {[
+                          { key: "erste-premier", label: "EP" },
+                          { key: "mass-affluent", label: "MMA" },
+                        ].map(({ key, label }) => {
+                          const active = appMode === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              title={key === "erste-premier" ? "Erste Premier" : "Mass Affluent"}
+                              onClick={() => setAppMode(key)}
+                              className={
+                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wider transition-all " +
+                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/60 hover:text-white")
+                              }
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1" role="tablist" aria-label="Volba měny">
-                  {["CZK", "EUR", "USD"].map((c) => {
-                    const active = currency === c;
-                    return (
-                      <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrencyNI(c); setSelectedFunds([]); setCategory("Vše"); }}
-                        className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
-                        {c}
-                      </button>
-                    );
-                  })}
+
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end lg:flex-1">
+                  <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
+                    <CoinsIcon size={16} className="text-ep-gold shrink-0" />
+                    <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
+                      Jednorázová investice
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      aria-label="Jednorázová investice"
+                      value={initialInvestment.toLocaleString(currency === "CZK" ? "cs-CZ" : currency === "EUR" ? "de-DE" : "en-US")}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const parsed = normalizeNumericInput(e.target.value);
+                        if (!Number.isFinite(parsed)) return;
+                        setInitialInvestment(Math.max(0, parsed));
+                      }}
+                      className="min-w-0 w-full bg-transparent text-right text-[13px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
+                    />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] font-semibold tracking-wider text-ep-gold/90">{currency}</span>
+                      <span className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setInitialInvestment(Math.max(0, initialInvestment - minStep))}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-white/15 text-[11px] leading-none text-white/70 transition hover:bg-white/10 hover:text-white"
+                          aria-label="Snížit počáteční investici"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInitialInvestment(initialInvestment + minStep)}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-white/15 text-[11px] leading-none text-white/70 transition hover:bg-white/10 hover:text-white"
+                          aria-label="Zvýšit počáteční investici"
+                        >
+                          +
+                        </button>
+                      </span>
+                    </div>
+                  </label>
+
+                  <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
+                    <CoinsIcon size={16} className="text-ep-gold shrink-0" />
+                    <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
+                      Pravidelná investice
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      aria-label="Pravidelná investice"
+                      value={monthlyContribution.toLocaleString(currency === "CZK" ? "cs-CZ" : currency === "EUR" ? "de-DE" : "en-US")}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const parsed = normalizeNumericInput(e.target.value);
+                        if (!Number.isFinite(parsed)) return;
+                        setMonthlyContribution(Math.max(0, parsed));
+                      }}
+                      className="min-w-0 w-full bg-transparent text-right text-[13px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
+                    />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] font-semibold tracking-wider text-ep-gold/90">{currency}</span>
+                      <span className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setMonthlyContribution(Math.max(0, monthlyContribution - monthlyStep))}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-white/15 text-[11px] leading-none text-white/70 transition hover:bg-white/10 hover:text-white"
+                          aria-label="Snížit pravidelnou investici"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMonthlyContribution(monthlyContribution + monthlyStep)}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-white/15 text-[11px] leading-none text-white/70 transition hover:bg-white/10 hover:text-white"
+                          aria-label="Zvýšit pravidelnou investici"
+                        >
+                          +
+                        </button>
+                      </span>
+                    </div>
+                  </label>
+
+                  <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1" role="tablist" aria-label="Volba měny">
+                    {["CZK", "EUR", "USD"].map((c) => {
+                      const active = currency === c;
+                      return (
+                        <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); }}
+                          className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </header>
@@ -3305,7 +3440,7 @@
                       <div>
                         <h3 className="text-lg font-semibold ep-text-navy">Srovnání vybraných fondů</h3>
                         <p className="text-sm text-slate-500">
-                          Simulovaný vývoj 1&nbsp;000 {currency} investovaných před 5 lety na základě historické výkonnosti p.a.
+                          Simulovaný vývoj investovaných finančních prostředků na základě historické výkonnosti.
                         </p>
                       </div>
                       <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
@@ -3439,7 +3574,7 @@
                             contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
                           />
                           <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
-                          <ReferenceLine y={viewMode === "percent" ? 0 : INITIAL_SIM_VALUE} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
+                          <ReferenceLine y={viewMode === "percent" ? 0 : initialInvestment} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
                           {compFunds.map((f, idx) => (
                             <Area
                               key={f.name}
@@ -3513,10 +3648,13 @@
         }, []);
 
         if (screen === "home") return <HomeScreen onNavigate={setScreen} />;
-        if (screen === "neni-investice") return <NeniInvesticeApp onBack={() => setScreen("home")} onNavigate={setScreen} />;
         return (
           <InvestmentProvider>
-            <Index onNavigate={setScreen} />
+            {screen === "neni-investice" ? (
+              <NeniInvesticeApp onBack={() => setScreen("home")} onNavigate={setScreen} />
+            ) : (
+              <Index onNavigate={setScreen} />
+            )}
           </InvestmentProvider>
         );
       }
