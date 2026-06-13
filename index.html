@@ -1344,7 +1344,36 @@
       /* ------------------------------------------------------------------ */
       /*  Header                                                             */
       /* ------------------------------------------------------------------ */
-      function Header({ onNavigateSubapp, activeScreen = "zpetna-modelace" }) {
+      function AppSwitchBar({ activeScreen, onNavigate }) {
+        return (
+          <div className="sticky top-0 z-50 border-b border-white/15 bg-ep-navy/95 text-white backdrop-blur">
+            <div className="mx-auto grid w-full max-w-[1400px] grid-cols-2 px-4 md:px-7">
+              {[
+                { key: "zpetna-modelace", label: "Zpětná modelace" },
+                { key: "neni-investice", label: "Není investice jako investice" },
+              ].map(({ key, label }) => {
+                const active = activeScreen === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => onNavigate(key)}
+                    className={
+                      "w-full border-x border-white/10 px-3 py-2 text-center text-[11px] font-semibold tracking-wide transition " +
+                      (active ? "bg-ep-gold text-ep-navy" : "bg-transparent text-white/80 hover:bg-white/10 hover:text-white")
+                    }
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      function Header() {
         const {
           currency,
           setCurrency,
@@ -1378,7 +1407,7 @@
         const monthlyStep = currency === "CZK" ? 5000 : 200;
 
         return (
-          <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
+          <header className="sticky top-[37px] z-40 bg-ep-gradient text-white shadow-premium">
             <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
             <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
               <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
@@ -1421,35 +1450,6 @@
                         );
                       })}
                     </div>
-                    {onNavigateSubapp && (
-                      <div
-                        className="mt-1.5 inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
-                        role="tablist"
-                        aria-label="Volba podaplikace"
-                      >
-                        {[
-                          { key: "zpetna-modelace", label: "Zpětná modelace" },
-                          { key: "neni-investice", label: "Není investice jako investice" },
-                        ].map(({ key, label }) => {
-                          const active = activeScreen === key;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              role="tab"
-                              aria-selected={active}
-                              onClick={() => onNavigateSubapp(key)}
-                              className={
-                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-all " +
-                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/70 hover:text-white")
-                              }
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -2754,7 +2754,8 @@
         const { appMode } = useInvestment();
         return (
           <div className="min-h-screen">
-            <Header onNavigateSubapp={onNavigate} activeScreen="zpetna-modelace" />
+            <AppSwitchBar activeScreen="zpetna-modelace" onNavigate={onNavigate} />
+            <Header />
             <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-10 md:py-12">
               <section className="mb-8 md:mb-10">
                 <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-ep-gradient p-6 text-white shadow-premium md:p-10">
@@ -2983,11 +2984,11 @@
         const [horizonMonths, setHorizonMonths] = useState(60);
         const TIMELINE_MIN =
           TIMELINE.length > 0
-            ? `${TIMELINE[0].ts.getFullYear()}-${String(TIMELINE[0].ts.getMonth() + 1).padStart(2, "0")}`
+            ? `${TIMELINE[0].date.getFullYear()}-${String(TIMELINE[0].date.getMonth() + 1).padStart(2, "0")}`
             : "";
         const TIMELINE_MAX =
           TIMELINE.length > 0
-            ? `${TIMELINE[TIMELINE.length - 1].ts.getFullYear()}-${String(TIMELINE[TIMELINE.length - 1].ts.getMonth() + 1).padStart(2, "0")}`
+            ? `${TIMELINE[TIMELINE.length - 1].date.getFullYear()}-${String(TIMELINE[TIMELINE.length - 1].date.getMonth() + 1).padStart(2, "0")}`
             : "";
         const [customDateFrom, setCustomDateFrom] = useState(TIMELINE_MIN);
         const [customDateTo, setCustomDateTo] = useState(TIMELINE_MAX);
@@ -3064,8 +3065,8 @@
         const growthData = useMemo(() => {
           return TIMELINE.map((point, index) => {
             const row = {
-              date: point.date,
-              ts: point.ts.getTime(),
+              date: point.label,
+              ts: point.date.getTime(),
             };
             compFunds.forEach((f) => {
               const annualRate = f.p5y ?? f.p3y ?? f.p1y;
@@ -3129,7 +3130,8 @@
         return (
           <div className="min-h-screen" style={{ background: "#f6f8fc" }}>
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
+            <AppSwitchBar activeScreen="neni-investice" onNavigate={onNavigate} />
+            <header className="sticky top-[37px] z-40 bg-ep-gradient text-white shadow-premium">
               <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
               <div className="relative mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-7">
                 <div className="flex items-center gap-3">
@@ -3152,31 +3154,6 @@
                     <div className="text-[11px] uppercase tracking-[0.28em] text-ep-gold/90">
                       Není investice jako investice
                     </div>
-                    {onNavigate && (
-                      <div className="mt-1.5 inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5" role="tablist" aria-label="Volba podaplikace">
-                        {[
-                          { key: "zpetna-modelace", label: "Zpětná modelace" },
-                          { key: "neni-investice", label: "Není investice jako investice" },
-                        ].map((item) => {
-                          const active = item.key === "neni-investice";
-                          return (
-                            <button
-                              key={item.key}
-                              type="button"
-                              role="tab"
-                              aria-selected={active}
-                              onClick={() => onNavigate(item.key)}
-                              className={
-                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-all " +
-                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/70 hover:text-white")
-                              }
-                            >
-                              {item.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1" role="tablist" aria-label="Volba měny">
