@@ -1332,6 +1332,7 @@
         const [currency, setCurrencyState] = useState("CZK");
         const [initialInvestment, setInitialInvestment] = useState(1_000_000);
         const [monthlyContribution, setMonthlyContribution] = useState(5_000);
+        const [appMode, setAppMode] = useState("erste-premier");
 
         const setCurrency = (next) => {
           setCurrencyState((prev) => {
@@ -1361,8 +1362,10 @@
             setMonthlyContribution,
             fxRate: FX_RATES_IN_CZK[currency] || 1,
             formatMoney,
+            appMode,
+            setAppMode,
           };
-        }, [currency, initialInvestment, monthlyContribution]);
+        }, [currency, initialInvestment, monthlyContribution, appMode]);
 
         return (
           <InvestmentContext.Provider value={value}>
@@ -1388,6 +1391,8 @@
           setInitialInvestment,
           monthlyContribution,
           setMonthlyContribution,
+          appMode,
+          setAppMode,
         } = useInvestment();
 
         const normalizeNumericInput = (value) => {
@@ -1422,10 +1427,38 @@
                   </div>
                   <div className="leading-tight">
                     <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
-                      ERSTE&nbsp;PREMIER
+                      {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
                     </div>
                     <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
                       Zpětné modelace
+                    </div>
+                    <div
+                      className="mt-1.5 inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
+                      role="tablist"
+                      aria-label="Volba módu"
+                    >
+                      {[
+                        { key: "erste-premier", label: "EP" },
+                        { key: "mass-affluent", label: "MA" },
+                      ].map(({ key, label }) => {
+                        const active = appMode === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            title={key === "erste-premier" ? "Erste Premier" : "Mass Affluent"}
+                            onClick={() => setAppMode(key)}
+                            className={
+                              "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wider transition-all " +
+                              (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/60 hover:text-white")
+                            }
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -2728,6 +2761,7 @@
       }
 
       function Index() {
+        const { appMode } = useInvestment();
         return (
           <div className="min-h-screen">
             <Header />
@@ -2769,7 +2803,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Erste Premier — Demo · Modelace na
+                © {new Date().getFullYear()} {appMode === "erste-premier" ? "Erste Premier" : "Mass Affluent"} — Demo · Modelace na
                 základě hypotetických historických dat. Nejedná se o investiční
                 doporučení.
               </footer>
