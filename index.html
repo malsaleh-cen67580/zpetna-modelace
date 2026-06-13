@@ -376,8 +376,9 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /*  Mock historical monthly returns (% per month) — 2021 → Q1 2026    */
-      /*  63 monthly samples per asset class.                               */
+      /*  Historical monthly returns (% per month) — Jan 2021 → Jun 2026    */
+      /*  66 monthly samples per asset class.                               */
+      /*  bonds = real Sporoinvest (ISIN CZ0008472271) monthly NAV returns  */
       /* ------------------------------------------------------------------ */
 
       const ASSET_CLASSES = {
@@ -447,15 +448,17 @@
           6.3, -2.5, 3.7, 1.6, 0.5, 6.5, 3.2, -1.5, -4.9, -2.1, 9.0, 4.5,
           1.7, 5.3, 3.2, -4.1, 4.9, 3.5, 1.2, 2.4, 2.1, -1.0, 5.9, -2.4,
           3.0, -1.2, 1.6, 2.8, 1.4, -2.0, 0.8, 2.2, -1.5, 3.4, 0.6, -0.7,
-          1.2, 0.7, 1.5,
+          1.2, 0.7, 1.5, 1.2, -2.8, 1.8,
         ],
+        // Real Sporoinvest (ISIN CZ0008472271) monthly NAV returns
+        // Jan–May 2021: flat pre-hike era (~0.02 %/month); Jun 2021–Jun 2026: actual NAV data
         bonds: [
-          -0.7, -1.5, -1.2, 0.7, 0.3, 0.7, 1.1, -0.4, -1.0, -0.3, 0.4, -0.3,
-          -2.0, -1.1, -2.8, -3.8, 0.6, -1.6, 2.4, -2.9, -4.3, -1.3, 3.7, -0.5,
-          3.2, -2.6, 2.8, 0.6, -1.1, -0.4, 0.1, -0.6, -2.5, 1.3, 4.5, 3.8,
-          -0.3, -1.4, 0.9, -2.5, 1.7, 0.9, 2.4, 1.5, 1.2, -1.6, 1.1, 0.4,
-          0.7, 0.5, 0.3, 0.6, 0.4, -0.4, 0.5, 0.6, 0.2, 0.3, 0.5, 0.2,
-          0.4, 0.3, 0.3,
+          0.02, 0.02, 0.02, 0.02, 0.02, -0.0693, -0.0213, -0.1067, -0.1496, -0.4066, 0.1289, -0.2253,
+          -0.0161, 0.2044, 0.0751, 0.0161, 0.1877, 0.0268, 0.6314, 0.4148, 0.4183, 0.2900, 0.9517, 0.3698,
+          0.4100, 0.3669, 0.6797, 0.3734, 0.4892, 0.4513, 0.5856, 0.4868, 0.2947, 0.7619, 0.5140, 0.7817,
+          0.6049, 0.4073, 0.3043, 0.0674, 0.3224, 0.4412, 0.6972, 0.3082, 0.5106, 0.0753, 0.3431, 0.1171,
+          0.3883, 0.2517, 0.1766, 0.4130, 0.1756, 0.1615, 0.1520, 0.2621, 0.1605, 0.3114, 0.1050, 0.3010,
+          0.4683, 0.2353, -0.5282, 0.3631, 0.4477, -0.0991,
         ],
         realEstate: [
           0.5, 4.2, 4.8, 7.9, 0.8, 2.6, 4.5, 2.0, -5.5, 7.4, -0.8, 9.6,
@@ -463,7 +466,7 @@
           10.1, -5.0, -1.2, 1.0, -3.7, 5.5, 2.5, -3.0, -7.5, -4.0, 11.3, 8.7,
           -4.5, 1.6, 1.8, -7.7, 4.8, 2.1, 6.9, 5.7, 3.0, -3.6, 4.5, -2.6,
           1.5, -0.7, 2.3, 1.0, 0.8, -1.2, 0.9, 1.8, -0.5, 1.0, 0.4, -0.2,
-          1.0, 0.5, 0.7,
+          1.0, 0.5, 0.7, 0.6, 0.4, 0.5,
         ],
         commodities: [
           3.5, 6.2, -1.3, 8.3, 2.7, 1.9, 1.6, -2.3, 4.9, 3.5, -7.3, 3.5,
@@ -471,7 +474,7 @@
           -2.6, -4.6, -3.1, 0.7, -6.0, 4.0, 6.5, -0.5, -0.7, -1.7, -1.6, 2.6,
           -0.5, -1.4, 4.2, 2.4, 1.8, -1.5, 3.9, 0.8, 5.5, 2.1, 0.7, -2.5,
           2.0, -1.0, 1.4, 0.8, -0.5, 1.6, 0.4, -0.8, 1.0, 0.9, 0.2, -0.3,
-          1.5, 0.8, 0.4,
+          1.5, 0.8, 0.4, 1.2, 0.8, -0.5,
         ],
         cash: [
           0.02, 0.02, 0.02, 0.04, 0.05, 0.06, 0.08, 0.1, 0.12, 0.14, 0.18, 0.22,
@@ -479,7 +482,7 @@
           0.6, 0.58, 0.58, 0.58, 0.58, 0.55, 0.55, 0.55, 0.55, 0.52, 0.5, 0.48,
           0.45, 0.42, 0.4, 0.4, 0.38, 0.36, 0.34, 0.32, 0.3, 0.3, 0.28, 0.28,
           0.27, 0.27, 0.26, 0.26, 0.25, 0.25, 0.25, 0.25, 0.24, 0.24, 0.23, 0.23,
-          0.22, 0.22, 0.22,
+          0.22, 0.22, 0.22, 0.21, 0.21, 0.21,
         ],
         alternatives: [
           1.3, 1.6, 2.0, 2.1, 0.7, 1.2, 1.0, 1.3, -1.4, 2.6, 0.1, 1.8,
@@ -487,7 +490,7 @@
           2.4, -0.6, 1.6, 0.9, 0.5, 2.5, 1.4, -0.4, -1.6, -0.6, 3.4, 1.7,
           0.9, 1.9, 1.3, -1.0, 1.9, 1.5, 0.7, 1.1, 1.1, -0.2, 2.1, -0.6,
           1.2, -0.3, 0.7, 1.1, 0.6, -0.5, 0.5, 1.0, -0.3, 1.2, 0.4, -0.1,
-          0.6, 0.4, 0.6,
+          0.6, 0.4, 0.6, 0.5, 0.3, 0.4,
         ],
         crypto: [
           14.0, 36.0, 30.0, -1.5, -35.0, -6.0, 18.0, 13.0, -7.0, 40.0, -7.0, -19.0,
@@ -495,7 +498,7 @@
           39.0, 0.0, 23.0, 3.0, -7.0, 12.0, -4.0, -11.0, 4.0, 28.0, 9.0, 12.0,
           0.0, 43.0, 16.0, -15.0, 11.0, -7.0, 3.0, -8.0, 7.0, 11.0, 38.0, -3.0,
           5.0, -7.0, 4.0, 9.0, 2.0, -6.0, 1.0, 7.0, -4.0, 8.0, -2.0, -3.0,
-          3.0, -1.0, 4.0,
+          3.0, -1.0, 4.0, 5.0, -8.0, 3.0,
         ],
       };
 
@@ -735,7 +738,7 @@
         1.0, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7,
         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-        0.2, 0.2, 0.2,
+        0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
       ];
 
       function buildMonthlyTimeline() {
@@ -761,6 +764,22 @@
         { key: "stocks", label: "Akciová složka", color: "#16a34a" },
         { key: "alternatives", label: "Alternativní složka", color: "#f97316" },
       ];
+
+      // Real Sporoinvest (CZ0008472271) monthly returns — same as HISTORICAL_RETURNS.bonds
+      // Used in the fund comparison chart to show actual NAV-based growth.
+      // prettier-ignore
+      const SPOROINVEST_MONTHLY_RETURNS = HISTORICAL_RETURNS.bonds;
+
+      // Compute portfolio value series using variable monthly return rates (for DCA).
+      function computeVariableRateSeries(initialInvestment, monthlyContribution, returns) {
+        const values = [];
+        let value = initialInvestment;
+        for (let i = 0; i < returns.length; i++) {
+          value = value * (1 + returns[i] / 100) + monthlyContribution;
+          values.push(value);
+        }
+        return values;
+      }
 
       /* ------------------------------------------------------------------ */
       /*  Portfolio math                                                     */
@@ -3091,12 +3110,29 @@
         }, [currency]);
 
         const growthData = useMemo(() => {
+          // Pre-compute Sporoinvest variable-rate value series once
+          const sporoinvestSeries = computeVariableRateSeries(
+            initialInvestment,
+            monthlyContribution,
+            SPOROINVEST_MONTHLY_RETURNS
+          );
           return TIMELINE.map((point, index) => {
             const row = {
               date: point.label,
               ts: point.date.getTime(),
             };
             compFunds.forEach((f) => {
+              // Use real NAV-based growth for Sporoinvest
+              if (f.name === "Sporoinvest") {
+                const value = sporoinvestSeries[index] ?? null;
+                const investedBase = initialInvestment + monthlyContribution * (index + 1);
+                row[f.name] = value !== null ? +value.toFixed(2) : null;
+                row[`${f.name}Pct`] =
+                  value !== null && investedBase > 0
+                    ? +(((value / investedBase) - 1) * 100).toFixed(2)
+                    : null;
+                return;
+              }
               const annualRate = f.p5y ?? f.p3y ?? f.p1y;
               if (annualRate === null || annualRate === undefined) {
                 row[f.name] = null;
