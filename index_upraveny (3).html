@@ -4442,6 +4442,7 @@
           value: e.weight,
           color: e.meta.color,
         }));
+        const total = allocationSum(allocation);
         return (
           <div className="relative h-[118px] w-[118px] shrink-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -4464,7 +4465,7 @@
               <div className="text-[8px] uppercase tracking-[0.2em] text-slate-500">
                 Alokace
               </div>
-              <div className="text-sm font-semibold ep-text-navy">100 %</div>
+              <div className="text-sm font-semibold ep-text-navy">{total} %</div>
             </div>
           </div>
         );
@@ -4731,15 +4732,33 @@
         const { currency, initialInvestment } = useInvestment();
         const [selectedId, setSelectedId] = useState(null);
         const [detailFunds, setDetailFunds] = useState([]);
+        const portfolioAllocations = useMemo(() => {
+          const out = {};
+          PRESET_PORTFOLIOS.forEach((portfolio) => {
+            const funds = getTemplateFundsForCurrency(portfolio, currency);
+            out[portfolio.id] = funds.length
+              ? funds.reduce((acc, fund) => {
+                  const bucket = fund.sleeve === "Úroková složka"
+                    ? "bonds"
+                    : fund.sleeve === "Akciová složka"
+                    ? "stocks"
+                    : "alternatives";
+                  acc[bucket] += Number(fund.weight) || 0;
+                  return acc;
+                }, { bonds: 0, stocks: 0, alternatives: 0 })
+              : portfolio.allocation;
+          });
+          return out;
+        }, [currency]);
         const stats = useMemo(() => {
           const out = {};
           PRESET_PORTFOLIOS.forEach((p) => {
             const funds = getTemplateFundsForCurrency(p, currency);
             const portPerf = computePortfolioPerf(funds, currency);
-            out[p.id] = { ...computeStats(p.allocation, initialInvestment, funds, currency), ...portPerf };
+            out[p.id] = { ...computeStats(portfolioAllocations[p.id], initialInvestment, funds, currency), ...portPerf };
           });
           return out;
-        }, [initialInvestment, currency]);
+        }, [initialInvestment, currency, portfolioAllocations]);
         const selected = PRESET_PORTFOLIOS.find((p) => p.id === selectedId) || null;
         useEffect(() => {
           if (!selected) {
@@ -4767,6 +4786,7 @@
               {PRESET_PORTFOLIOS.map((p) => {
                 const s = stats[p.id];
                 const isSelected = selectedId === p.id;
+                const displayAllocation = portfolioAllocations[p.id] || p.allocation;
                 return (
                   <article key={p.id} className={"group relative flex flex-col rounded-2xl border bg-white p-5 shadow-premium transition-all duration-300 " + (isSelected ? "border-ep-gold/70 ring-2 ring-ep-gold/30 shadow-premium-hover" : "border-slate-200 hover:-translate-y-0.5 hover:border-ep-blue/30 hover:shadow-premium-hover")}>
                     <header className="mb-4 flex items-start justify-between gap-3">
@@ -4782,8 +4802,8 @@
                     </header>
                     <p className="mb-4 text-sm leading-relaxed text-slate-500">{p.tagline}</p>
                     <div className="mb-4 flex items-start gap-3.5">
-                      <DonutChart allocation={p.allocation} />
-                      <AllocationLegend allocation={p.allocation} />
+                      <DonutChart allocation={displayAllocation} />
+                      <AllocationLegend allocation={displayAllocation} />
                     </div>
                     
                     <button type="button" onClick={() => openDetail(p)} className={"mt-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all " + (isSelected ? "bg-ep-gold text-ep-navy shadow-md" : "bg-ep-navy text-white hover:bg-ep-blue")} aria-pressed={isSelected}>
@@ -5340,9 +5360,11 @@
         "SUSTAINABLE GLOBAL CORPORATE BOND": "Dluhopisy",
         "BNPP Flexi I Flexible Convertible Bond": "Dluhopisy",
         "Franklin U.S. Government Fund": "Dluhopisy",
+        "Franklin U.S. Government Fund USD": "Dluhopisy",
         "GOLDMAN SACHS USD GREEN BOND": "Dluhopisy",
         "Franklin U.S. Dollar Short-Term Money Market": "Peněžní trh",
         "BNP Paribas Funds USD Money Market": "Peněžní trh",
+        "Měnový prémiový vklad v USD 06/2023": "Peněžní trh",
         "BNP Paribas Flexi I Commodities": "Komodity",
         "Fidelity Funds - Global High Yield Fund A-ACC-USD": "Dluhopisy HY",
         "Fidelity Funds - Emerging Market Corporate Debt Fund A-ACC-USD": "Dluhopisy HY",
