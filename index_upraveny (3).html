@@ -2791,10 +2791,8 @@
             alloc[fund.name] = (alloc[fund.name] || 0) + w;
             return;
           }
-          const sleeveKey = SLEEVE_TO_ASSET_CLASS[fund.sleeve];
-          if (sleeveKey) {
-            sleeveRemainder[sleeveKey] = (sleeveRemainder[sleeveKey] || 0) + w;
-          }
+          const simKey = `SIM::${simulationProfileForFund(fund.name, currency, fund.sleeve)}`;
+          sleeveRemainder[simKey] = (sleeveRemainder[simKey] || 0) + w;
         });
         Object.entries(sleeveRemainder).forEach(([key, w]) => {
           alloc[key] = (alloc[key] || 0) + w;
@@ -3137,6 +3135,37 @@
         alternatives: aggregateDailyReturnsToWeekly(HISTORICAL_RETURNS.alternatives),
         cash: aggregateDailyReturnsToWeekly(HISTORICAL_RETURNS.cash),
       };
+      const SIMULATED_WEEKLY_RETURNS = {
+        govBonds: WEEKLY_HISTORICAL_RETURNS.cash.map((r, i) => r * 0.65 + (WEEKLY_HISTORICAL_RETURNS.bonds[i] || 0) * 0.35),
+        corpBonds: WEEKLY_HISTORICAL_RETURNS.bonds.map((r, i) => r * 0.8 + (WEEKLY_HISTORICAL_RETURNS.cash[i] || 0) * 0.2),
+        highYield: WEEKLY_HISTORICAL_RETURNS.bonds.map((r, i) => {
+          const base = r * 0.45 + (WEEKLY_HISTORICAL_RETURNS.stocks[i] || 0) * 0.55;
+          return base < 0 ? base * 1.2 : base * 0.92;
+        }),
+        commodities: WEEKLY_HISTORICAL_RETURNS.alternatives.map((r, i) => r * 1.05 + (WEEKLY_HISTORICAL_RETURNS.stocks[i] || 0) * 0.15),
+        alternatives: WEEKLY_HISTORICAL_RETURNS.alternatives.map((r) => r),
+        equityGlobal: WEEKLY_HISTORICAL_RETURNS.stocks.map((r) => r),
+        equityNorthAmerica: WEEKLY_HISTORICAL_RETURNS.stocks.map((r) => r * 1.05),
+        equityEurope: WEEKLY_HISTORICAL_RETURNS.stocks.map((r) => r * 0.9),
+        equityAsia: WEEKLY_HISTORICAL_RETURNS.stocks.map((r) => (r < 0 ? r * 1.12 : r * 1.08)),
+        sector: WEEKLY_HISTORICAL_RETURNS.stocks.map((r) => (r < 0 ? r * 1.28 : r * 1.15)),
+      };
+      function simulationProfileForFund(fundName, currency = "CZK", sleeve = "") {
+        const isin = KNOWN_ISINS_BY_CURRENCY?.[currency]?.[fundName] || "";
+        const cat = getFundCategoryInfo(fundName, currency, isin, sleeve);
+        if (cat.main === "Sektorové fondy") return "sector";
+        if (cat.main === "Akciové fondy") {
+          if (cat.sub === "Severní Amerika") return "equityNorthAmerica";
+          if (cat.sub === "Evropa") return "equityEurope";
+          if (cat.sub === "Asie") return "equityAsia";
+          return "equityGlobal";
+        }
+        if (cat.sub === "Státní a krátkodobé dluhopisy") return "govBonds";
+        if (cat.sub === "Korporátní dluhopisy") return "corpBonds";
+        if (cat.sub === "High Yield dluhopisy a Emerging Markets") return "highYield";
+        if (cat.sub === "Komodity") return "commodities";
+        return "alternatives";
+      }
 
       const BENCHMARK_INFLATION_WEEKLY = aggregateDailyReturnsToWeekly(BENCHMARK_INFLATION);
 
@@ -3168,7 +3197,7 @@
       // Compute portfolio value series using weekly returns with monthly contributions.
       // Monthly contribution is added at the start of each new calendar month.
       function computeVariableRateSeries(initialInvestment, monthlyContribution, returns) {
-        const values = [];
+        const values = [initialInvestment];
         let value = initialInvestment;
         for (let i = 0; i < returns.length; i++) {
           if (i > 0 && WEEKLY_DATES[i].substring(0, 7) !== WEEKLY_DATES[i - 1].substring(0, 7)) {
@@ -3192,6 +3221,8 @@
           let series = null;
           if (key.startsWith("ISIN::")) {
             series = FUND_WEEKLY_RETURNS_BY_ISIN[key.slice(6)] || null;
+          } else if (key.startsWith("SIM::")) {
+            series = SIMULATED_WEEKLY_RETURNS[key.slice(5)] || null;
           } else {
             series = getFundReturnSeries(key, currency) || WEEKLY_HISTORICAL_RETURNS[key] || null;
           }
@@ -3239,8 +3270,19 @@
         let inflationValue = initialInvestment;
         let totalContributed = initialInvestment;
 
+        portfolio.push(initialInvestment);
+        inflation.push(initialInvestment);
+        contributed.push(initialInvestment);
+        SLEEVE_SERIES.forEach(({ key }) => {
+          const sleeveWeight = (allocation[key] || 0) / 100;
+          sleeveValues[key].push(initialInvestment * sleeveWeight);
+          sleeveContributed[key].push(initialInvestment * sleeveWeight);
+        });
+
         for (let i = 0; i < weekly.length; i++) {
-          const isNewMonth = i > 0 && WEEKLY_DATES[i].substring(0, 7) !== WEEKLY_DATES[i - 1].substring(0, 7);
+          const weekDate = WEEKLY_DATES[i + 1];
+          const prevWeekDate = WEEKLY_DATES[i];
+          const isNewMonth = weekDate.substring(0, 7) !== prevWeekDate.substring(0, 7);
           if (isNewMonth) {
             portfolioValue += normalizedContribution;
             inflationValue += normalizedContribution;
@@ -3259,7 +3301,7 @@
               sleeve.contributed += sleeve.monthlyContribution;
             }
             const sleeveWeight = (allocation[key] || 0) / 100;
-            const assetWeeklyReturn = WEEKLY_HISTORICAL_RETURNS[key]?.[i] || 0;
+            const assetWeeklyReturn = WEEKLY_HISTORICAL_RETURNS[key]?.[i] || weekly[i] || 0;
             sleeve.value = sleeve.value * (1 + assetWeeklyReturn / 100);
             sleeveValues[key].push(sleeve.value * sleeveWeight);
             sleeveContributed[key].push(sleeve.contributed * sleeveWeight);
@@ -3289,6 +3331,24 @@
         if (start <= 0 || end <= 0 || months <= 0) return 0;
         const years = months / 12;
         return (Math.pow(end / start, 1 / years) - 1) * 100;
+      }
+      function computeChartDomain(dataRows, dataKeys, fallbackMin = 0, fallbackMax = 100) {
+        const values = [];
+        (dataRows || []).forEach((row) => {
+          (dataKeys || []).forEach((key) => {
+            const val = Number(row?.[key]);
+            if (Number.isFinite(val)) values.push(val);
+          });
+        });
+        if (!values.length) return [fallbackMin, fallbackMax];
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        if (min === max) {
+          const pad = Math.max(Math.abs(min) * 0.05, 1);
+          return [min - pad, max + pad];
+        }
+        const pad = (max - min) * 0.12;
+        return [min - pad, max + pad];
       }
       function stddev(values) {
         if (values.length <= 1) return 0;
@@ -3401,8 +3461,7 @@
         {
           id: "rrc1",
           name: "RŘC1",
-          tagline:
-            "Investiční řešení – 5 let a více, Rizikovost 1",
+          tagline: "Investiční řešení – 5 let a více, Rizikovost 1",
           riskLabel: "Nejkonzervativnější strategie",
           riskLevel: 1,
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 1",
@@ -3415,19 +3474,14 @@
             { name: "Reico ČS Nemovitostní", weight: 5, sleeve: "Alternativní složka" },
           ],
           fundsByCurrency: {
-            EUR: [
-              { name: "BNP Paribas Funds Euro Money Market", weight: 100, sleeve: "Úroková složka" },
-            ],
-            USD: [
-              { name: "BNP Paribas Funds USD Money Market", weight: 100, sleeve: "Úroková složka" },
-            ],
+            EUR: [{ name: "BNP Paribas Funds Euro Money Market", weight: 100, sleeve: "Úroková složka" }],
+            USD: [{ name: "BNP Paribas Funds USD Money Market", weight: 100, sleeve: "Úroková složka" }],
           },
         },
         {
           id: "rrc2c",
           name: "RŘC2",
-          tagline:
-            "Investiční řešení – 5 let a více, Rizikovost 2",
+          tagline: "Investiční řešení – 5 let a více, Rizikovost 2",
           riskLabel: "Konzervativní strategie",
           riskLevel: 2,
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 2",
@@ -3465,18 +3519,17 @@
         {
           id: "rrc3c",
           name: "RŘC3",
-          tagline:
-            "Investiční řešení – 5 let a více, Rizikovost 3",
+          tagline: "Investiční řešení – 5 let a více, Rizikovost 3",
           riskLabel: "Vyvážená strategie",
           riskLevel: 3,
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 3",
-          allocation: { bonds: 45, stocks: 35, alternatives: 15 },
+          allocation: { bonds: 45, stocks: 40, alternatives: 15 },
           funds: [
             { name: "Sporoinvest", weight: 5, sleeve: "Úroková složka" },
             { name: "Sporobond", weight: 15, sleeve: "Úroková složka" },
             { name: "Fidelity Global Income Fund", weight: 15, sleeve: "Úroková složka" },
             { name: "Fidelity Global High Yield", weight: 10, sleeve: "Úroková složka" },
-            { name: "Fidelity Global Dividend", weight: 10, sleeve: "Akciová složka" },
+            { name: "Fidelity Global Dividend", weight: 15, sleeve: "Akciová složka" },
             { name: "BNP US Growth", weight: 10, sleeve: "Akciová složka" },
             { name: "Allianz Artificial Intelligence", weight: 5, sleeve: "Akciová složka" },
             { name: "Franklin Mutual European", weight: 5, sleeve: "Akciová složka" },
@@ -3491,7 +3544,7 @@
               { name: "BNP Paribas Funds Euro Government Bond", weight: 20, sleeve: "Úroková složka" },
               { name: "Fidelity Fund Global Income", weight: 15, sleeve: "Úroková složka" },
               { name: "ERSTE BOND EUROPE HIGH YIELD", weight: 10, sleeve: "Úroková složka" },
-              { name: "Fidelity Global Dividend", weight: 15, sleeve: "Akciová složka" },
+              { name: "Fidelity Global Dividend", weight: 25, sleeve: "Akciová složka" },
               { name: "Franklin Mutual European", weight: 10, sleeve: "Akciová složka" },
               { name: "Allianz Global Artificial Intelligence (EUR)", weight: 5, sleeve: "Akciová složka" },
               { name: "ESPA STOCK EUROPE-PROPERTY (VT) EUR", weight: 10, sleeve: "Alternativní složka" },
@@ -3510,8 +3563,7 @@
         {
           id: "rrc4c",
           name: "RŘC4",
-          tagline:
-            "Investiční řešení – 5 let a více, Rizikovost 4",
+          tagline: "Investiční řešení – 5 let a více, Rizikovost 4",
           riskLabel: "Dynamická strategie",
           riskLevel: 4,
           mpVariant: "Investiční řešení – 5 let a více, Rizikovost 4",
@@ -3782,15 +3834,21 @@
         return Number(digits.replace(/^0+(?=\d)/, ""));
       }
 
-      function AppSwitchBar({ activeScreen, onNavigate }) {
+      function SectionSwitchBar({ activeScreen, onNavigate }) {
         return (
-          <div className="sticky top-0 z-50 border-b border-white/15 bg-ep-navy/95 text-white backdrop-blur">
-            <div className="mx-auto max-w-[1400px] px-4 py-1.5 md:px-7">
-              <div className="grid grid-cols-2 rounded-xl border border-white/20 bg-white/5 p-1">
+          <div className="relative mt-6 grid gap-3 md:grid-cols-2">
               {[
-                { key: "zpetna-modelace", label: "Zpětná modelace" },
-                { key: "neni-investice", label: "Není investice jako investice" },
-              ].map(({ key, label }) => {
+                {
+                  key: "zpetna-modelace",
+                  label: "Zpětná modelace investičních strategií",
+                  text: "Prozkoumejte, jak by se vyvíjela vaše počáteční investice v rámci čtyř variant RŘC pro horizont 5 let a déle — nebo si sestavte vlastní portfolio a získejte detailní analytický report s metrikami rizika a výnosu.",
+                },
+                {
+                  key: "neni-investice",
+                  label: "Není investice jako investice",
+                  text: "Porovnejte historické výkonnosti fondů z nabídky Erste Premier. Vyberte fondy pro detailní srovnání a zjistěte, jak se od sebe skutečně liší.",
+                },
+              ].map(({ key, label, text }) => {
                 const active = activeScreen === key;
                 return (
                   <button
@@ -3798,24 +3856,23 @@
                     type="button"
                     onClick={() => onNavigate(key)}
                     className={
-                      "w-full rounded-lg border px-3 py-2 text-center text-[11px] font-semibold tracking-wide transition " +
+                      "w-full rounded-2xl border px-4 py-4 text-left transition-all md:px-5 " +
                       (active
-                        ? "border-ep-gold bg-ep-gold text-ep-navy shadow-sm"
-                        : "border-white/15 bg-transparent text-white/80 hover:border-white/30 hover:bg-white/10 hover:text-white")
+                        ? "border-ep-gold bg-white/18 ring-2 ring-ep-gold/45"
+                        : "border-white/20 bg-white/8 hover:bg-white/12")
                     }
                     aria-current={active ? "page" : undefined}
                   >
-                    {label}
+                    <div className={"text-sm font-semibold md:text-base " + (active ? "text-ep-gold" : "text-white")}>{label}</div>
+                    <p className={"mt-1 text-xs leading-relaxed md:text-sm " + (active ? "text-white" : "text-white/80")}>{text}</p>
                   </button>
                 );
               })}
-              </div>
-            </div>
           </div>
         );
       }
 
-      function Header({ onBack }) {
+      function Header() {
         const {
           currency,
           setCurrency,
@@ -3823,8 +3880,6 @@
           setInitialInvestment,
           monthlyContribution,
           setMonthlyContribution,
-          appMode,
-          setAppMode,
         } = useInvestment();
 
         const handleAmount = (e) => {
@@ -3843,60 +3898,21 @@
         const monthlyStep = currency === "CZK" ? 5000 : 200;
 
         return (
-          <header className="sticky top-[37px] z-40 bg-ep-gradient text-white shadow-premium">
+          <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
             <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
             <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
               <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
                 <div className="flex items-center gap-4">
-                  {typeof onBack === "function" && (
-                    <button
-                      type="button"
-                      onClick={onBack}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/8 text-white/80 transition hover:bg-white/15 hover:text-white"
-                      aria-label="Zpět na výběr"
-                      style={{ background: "rgba(255,255,255,0.08)" }}
-                    >
-                      ←
-                    </button>
-                  )}
                   <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5 backdrop-blur">
                     <TrendingUpIcon size={20} className="text-ep-gold" />
                   </div>
                   <div className="leading-tight">
                     <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
-                      {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
+                      ERSTE&nbsp;PREMIER
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
                         Zpětné modelace
-                      </div>
-                      <div
-                        className="inline-flex items-center rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur"
-                        role="tablist"
-                        aria-label="Volba módu"
-                      >
-                        {[
-                          { key: "erste-premier", label: "EP" },
-                          { key: "mass-affluent", label: "MMA" },
-                        ].map(({ key, label }) => {
-                          const active = appMode === key;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              role="tab"
-                              aria-selected={active}
-                              title={key === "erste-premier" ? "Erste Premier" : "Mass Affluent"}
-                              onClick={() => setAppMode(key)}
-                              className={
-                                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wider transition-all " +
-                                (active ? "bg-ep-gold text-ep-navy shadow" : "text-white/60 hover:text-white")
-                              }
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
                       </div>
                     </div>
                   </div>
@@ -4051,6 +4067,7 @@
         title = "Vývoj investice (modelace)",
         subtitle = "Hypotetický vývoj počáteční investice — týdenní granularita (průnik denních a týdenních dat fondů).",
         baseStrategyId = null,
+        defaultComparisonIds = [],
       }) {
         const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
         const chartId = useId().replace(/:/g, "");
@@ -4077,9 +4094,9 @@
         ];
         const effectiveMonthlyContribution = monthlyContribution;
         useEffect(() => {
-          setCompareStrategyIds([]);
+          setCompareStrategyIds(defaultComparisonIds || []);
           setShowSleeves(false);
-        }, [baseStrategyId, title]);
+        }, [baseStrategyId, title, defaultComparisonIds]);
         useEffect(() => {
           if (compareStrategyIds.length > 0) {
             setShowSleeves(false);
@@ -4154,6 +4171,25 @@
         }, [displayData]);
         const portfolioKey = viewMode === "percent" ? "portfolioPct" : "portfolio";
         const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
+        const activeDataKeys = useMemo(() => {
+          const keys = [portfolioKey, inflationKey];
+          if (showSleeves && canSplitSleeves) {
+            activeSleeveSeries.forEach((series) => keys.push(series.dataKey));
+          } else {
+            activeComparisonStrategies.forEach((strategy) => keys.push(`comparison_${strategy.id}`));
+          }
+          return keys;
+        }, [portfolioKey, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
+        const yDomain = useMemo(
+          () =>
+            computeChartDomain(
+              displayData,
+              activeDataKeys,
+              viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
+              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05)
+            ),
+          [displayData, activeDataKeys, viewMode, initialInvestment]
+        );
         const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
         const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
@@ -4335,7 +4371,7 @@
                   </defs>
                   <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
                   <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
-                  <YAxis tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
+                  <YAxis domain={yDomain} tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
                   {showSleeves && canSplitSleeves
@@ -4760,24 +4796,21 @@
           return out;
         }, [initialInvestment, currency, portfolioAllocations]);
         const selected = PRESET_PORTFOLIOS.find((p) => p.id === selectedId) || null;
+        const activePortfolio = selected || PRESET_PORTFOLIOS[0];
         useEffect(() => {
-          if (!selected) {
-            setDetailFunds([]);
-            return;
-          }
-          setDetailFunds(getTemplateFundsForCurrency(selected, currency));
-        }, [selected, currency]);
+          setDetailFunds(getTemplateFundsForCurrency(activePortfolio, currency));
+        }, [activePortfolio, currency]);
         const detailAllocation = useMemo(() => {
           if (!detailFunds || !detailFunds.length)
-            return selected ? selected.allocation : { bonds: 0, stocks: 0, alternatives: 0 };
+            return activePortfolio ? activePortfolio.allocation : { bonds: 0, stocks: 0, alternatives: 0 };
           return detailFunds.reduce((acc, fund) => {
             const bucket = fund.sleeve === "Úroková složka" ? "bonds" : fund.sleeve === "Akciová složka" ? "stocks" : "alternatives";
             acc[bucket] += Number(fund.weight) || 0;
             return acc;
           }, { bonds: 0, stocks: 0, alternatives: 0 });
-        }, [detailFunds, selected]);
+        }, [detailFunds, activePortfolio]);
         const openDetail = (portfolio) => {
-          setSelectedId(portfolio.id);
+          setSelectedId((prev) => (prev === portfolio.id ? null : portfolio.id));
           setDetailFunds(getTemplateFundsForCurrency(portfolio, currency));
         };
         return (
@@ -4807,21 +4840,26 @@
                     </div>
                     
                     <button type="button" onClick={() => openDetail(p)} className={"mt-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all " + (isSelected ? "bg-ep-gold text-ep-navy shadow-md" : "bg-ep-navy text-white hover:bg-ep-blue")} aria-pressed={isSelected}>
-                      {isSelected ? (<><CheckCircle2Icon size={16} />Detail portfolia zobrazen</>) : (<><LineChartIcon size={16} />Zobrazit detail portfolia</>)}
+                      {isSelected ? (<><CheckCircle2Icon size={16} />Zrušit výběr</>) : (<><LineChartIcon size={16} />Zobrazit detail portfolia</>)}
                     </button>
                   </article>
                 );
               })}
             </div>
-            {selected && (
-              <div className="fade-in space-y-6">
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
-                  <PerformanceChart allocation={detailAllocation} funds={detailFunds} title="Detail portfolia" subtitle={`Rizikovost řešení cíle ${selected.name.replace("RŘC", "")}`} baseStrategyId={selected.id} />
-                  <HistoricalPerformanceSidebar stats={stats[selected.id]} />
-                </div>
-                <PortfolioDetailEditor portfolio={selected} onAllocationChange={setDetailFunds} />
+            <div className="fade-in space-y-6">
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+                <PerformanceChart
+                  allocation={detailAllocation}
+                  funds={detailFunds}
+                  title={selected ? "Detail portfolia" : "Srovnání RŘC variant"}
+                  subtitle={selected ? `Rizikovost řešení cíle ${selected.name.replace("RŘC", "")}` : "Výchozí zobrazení obsahuje všechny 4 varianty RŘC."}
+                  baseStrategyId={activePortfolio.id}
+                  defaultComparisonIds={selected ? [] : PRESET_PORTFOLIOS.filter((p) => p.id !== activePortfolio.id).map((p) => p.id)}
+                />
+                <HistoricalPerformanceSidebar stats={stats[activePortfolio.id]} />
               </div>
-            )}
+              {selected ? <PortfolioDetailEditor portfolio={selected} onAllocationChange={setDetailFunds} /> : null}
+            </div>
           </div>
         );
       }
@@ -5238,11 +5276,9 @@
       }
 
       function Index({ onNavigate }) {
-        const { appMode } = useInvestment();
         return (
           <div className="min-h-screen">
-            <AppSwitchBar activeScreen="zpetna-modelace" onNavigate={onNavigate} />
-            <Header onBack={() => onNavigate("home")} />
+            <Header />
             <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-10 md:py-12">
               <section className="mb-8 md:mb-10">
                 <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-ep-gradient p-6 text-white shadow-premium md:p-10">
@@ -5257,6 +5293,7 @@
                       sestavte vlastní portfolio a získejte detailní analytický
                       report s metrikami rizika a výnosu.
                     </p>
+                    <SectionSwitchBar activeScreen="zpetna-modelace" onNavigate={onNavigate} />
                   </div>
                 </div>
               </section>
@@ -5281,7 +5318,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} {appMode === "erste-premier" ? "Erste Premier" : "Mass Affluent"} — Demo · Modelace na
+                © {new Date().getFullYear()} Erste Premier — Demo · Modelace na
                 základě hypotetických historických dat. Nejedná se o investiční
                 doporučení.
               </footer>
@@ -5293,85 +5330,123 @@
       /* ------------------------------------------------------------------ */
       /*  Fund categories for "Není investice jako investice"              */
       /* ------------------------------------------------------------------ */
-      const FUND_CATEGORIES_CZK = {
-        "Sporoinvest": "Dluhopisy státní",
-        "Sporobond": "Dluhopisy státní",
-        "Goldman Sachs Czech Crown Bond": "Dluhopisy státní",
-        "Templeton Global Bond": "Dluhopisy státní",
-        "ČS korporátní dluhopisový": "Dluhopisy korporátní",
-        "BNP Euro Corporate Bond": "Dluhopisy korporátní",
-        "Fidelity Global Income Fund": "Dluhopisy korporátní",
-        "High Yield dluhopisový": "Dluhopisy HY",
-        "Fidelity Global High Yield": "Dluhopisy HY",
-        "Fidelity European High Yield": "Dluhopisy HY",
-        "Trendbond": "Dluhopisy HY",
-        "Erste Stock Commodities": "Komodity",
-        "BNPP Flexi I Commodities": "Komodity",
-        "Reico ČS Nemovitostní": "Reality & Alternativy",
-        "Reico ČS Long lease": "Reality & Alternativy",
-        "BNP Paribas Funds Global Convertible": "Reality & Alternativy",
-        "Goldman Sachs Commodity Enhanced": "Reality & Alternativy",
-        "BNPP Flexi I Absolute Return Convertible": "Reality & Alternativy",
-        "BNPP Paribas Global Absolute Return": "Reality & Alternativy",
+      const MAIN_CATEGORY_ORDER = ["Dluhopisové fondy", "Akciové fondy", "Sektorové fondy"];
+      const SUBCATEGORY_ORDER = {
+        "Dluhopisové fondy": [
+          "Státní a krátkodobé dluhopisy",
+          "Korporátní dluhopisy",
+          "High Yield dluhopisy a Emerging Markets",
+          "Komodity",
+          "Nemovitosti a alternativy",
+        ],
+        "Akciové fondy": ["Global", "Severní Amerika", "Evropa", "Asie"],
+        "Sektorové fondy": ["Sektorové fondy"],
       };
-      const FUND_CATEGORIES_EUR = {
-        "BNP Paribas Funds Aqua": "Akciové",
-        "Goldman Sachs Global Sustainable Equity": "Akciové",
-        "BNP Paribas Funds US Growth": "Akciové",
-        "BNP Paribas Funds Disruptive Technology": "Akciové",
-        "BNP Paribas Funds Euro Equity": "Akciové",
-        "ERSTE Responsible Stock America VT": "Akciové",
-        "Fidelity Global Dividend": "Akciové",
-        "Allianz Global Artificial Intelligence (EUR)": "Akciové",
-        "Fidelity European Multi Asset Income Fund": "Akciové",
-        "Fidelity Fund Global Income": "Dluhopisy",
-        "BNP Paribas Funds Euro Government Bond": "Dluhopisy",
-        "BNP Paribas Funds Global Convertible": "Dluhopisy",
-        "BNP Paribas Funds Euro Corporate Bond": "Dluhopisy",
-        "Templeton Global Bond Fund": "Dluhopisy",
-        "Franklin Euro Government Bond Fund": "Dluhopisy",
-        "Fidelity Euro Bond Fund A-ACC-Euro": "Dluhopisy",
-        "BNP PARIBAS FLEXI I ABS Return Convertible": "Dluhopisy",
-        "BNPP Flexi I Flexible Convertible Bond": "Dluhopisy",
-        "ERSTE PORTFOLIO BOND EUROPE": "Dluhopisy",
-        "ERSTE BOND EUROPE HIGH YIELD": "Dluhopisy HY",
-        "GOLDMAN SACHS USD GREEN BOND": "Dluhopisy",
-        "Franklin European Corporate Bond Fund": "Dluhopisy",
-        "BNP Paribas Funds Euro Money Market": "Peněžní trh",
-        "ERSTE RESERVE DOLLAR": "Peněžní trh",
-        "Goldman Sachs Euro Fixed Income": "Dluhopisy",
-        "ESPA STOCK BIOTEC (VT) EUR": "Akciové",
-        "ESPA STOCK GLOBAL-EMERGING MARKETS (VT) EUR": "Akciové",
-        "ESPA STOCK EUROPE-PROPERTY (VT) EUR": "Reality & Alternativy",
+      const FUND_CLASSIFICATION_BY_ISIN = {
+        CZ0008472271: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        CZ0008472263: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0082087437: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0768356593: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0111548326: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0012186622: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0083138064: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0138076046: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0543330301: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0128526901: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        UCER270624: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        CZ0008472230: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU1022391483: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU1692483032: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0882574998: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0261946288: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0282388437: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0131210360: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0496369546: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU1114574418: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0979393146: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        CZ0008472412: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        CZ0008472297: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        AT0000673280: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0900495697: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0740037022: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        AT0000A1E119: { main: "Dluhopisové fondy", sub: "Komodity" },
+        LU1931956954: { main: "Dluhopisové fondy", sub: "Komodity" },
+        LU1931956285: { main: "Dluhopisové fondy", sub: "Komodity" },
+        CZ0008472545: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        CZ0008476280: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU0823394423: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU0823394852: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU0629872945: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU2020654062: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU2020654575: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU2020653924: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU2020653767: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU2155808657: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        AT0000613617: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        CZ0008472404: { main: "Akciové fondy", sub: "Global" },
+        CZ0008475043: { main: "Akciové fondy", sub: "Global" },
+        AT0000A1AW14: { main: "Akciové fondy", sub: "Global" },
+        LU1400167216: { main: "Akciové fondy", sub: "Global" },
+        LU0979392924: { main: "Akciové fondy", sub: "Global" },
+        LU0605515377: { main: "Akciové fondy", sub: "Global" },
+        LU1542713687: { main: "Akciové fondy", sub: "Global" },
+        LU2484078758: { main: "Akciové fondy", sub: "Global" },
+        IE000YC7FPB6: { main: "Akciové fondy", sub: "Global" },
+        LU0405489047: { main: "Akciové fondy", sub: "Global" },
+        LU1165135440: { main: "Akciové fondy", sub: "Global" },
+        LU1548497426: { main: "Akciové fondy", sub: "Global" },
+        LU1620156130: { main: "Akciové fondy", sub: "Global" },
+        LU0823421333: { main: "Akciové fondy", sub: "Global" },
+        LU0109392836: { main: "Akciové fondy", sub: "Global" },
+        LU0109391861: { main: "Akciové fondy", sub: "Global" },
+        LU1711970159: { main: "Akciové fondy", sub: "Global" },
+        IE000YUTMIU2: { main: "Akciové fondy", sub: "Global" },
+        AT0000639463: { main: "Akciové fondy", sub: "Severní Amerika" },
+        LU0979392767: { main: "Akciové fondy", sub: "Severní Amerika" },
+        LU0405488825: { main: "Akciové fondy", sub: "Severní Amerika" },
+        LU0823434310: { main: "Akciové fondy", sub: "Severní Amerika" },
+        LU0823434237: { main: "Akciové fondy", sub: "Severní Amerika" },
+        LU0823434583: { main: "Akciové fondy", sub: "Severní Amerika" },
+        AT0000A0A1P0: { main: "Akciové fondy", sub: "Severní Amerika" },
+        CZ0008472289: { main: "Akciové fondy", sub: "Evropa" },
+        AT0000A2QP89: { main: "Akciové fondy", sub: "Evropa" },
+        LU0082087353: { main: "Akciové fondy", sub: "Evropa" },
+        LU0823401228: { main: "Akciové fondy", sub: "Evropa" },
+        LU0823401574: { main: "Akciové fondy", sub: "Evropa" },
+        LU2451817873: { main: "Akciové fondy", sub: "Evropa" },
+        LU0768356080: { main: "Akciové fondy", sub: "Evropa" },
+        LU1213835512: { main: "Akciové fondy", sub: "Asie" },
+        LU3215558704: { main: "Akciové fondy", sub: "Asie" },
+        LU0768356247: { main: "Akciové fondy", sub: "Asie" },
+        LU0429745879: { main: "Akciové fondy", sub: "Asie" },
+        AT0000A10QN3: { main: "Akciové fondy", sub: "Asie" },
+        AT0000A00GK1: { main: "Akciové fondy", sub: "Asie" },
+        AT0000A0XYP0: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        AT0000A3N017: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU1789409619: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU2033393641: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU1641601064: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU1548497699: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU2898087106: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        AT0000A044X2: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU0429746091: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU1458425730: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU0295015134: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        LU2739071228: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        AT0000673165: { main: "Sektorové fondy", sub: "Sektorové fondy" },
       };
-      const FUND_CATEGORIES_USD = {
-        "Allianz Artificial Intelligence": "Akciové",
-        "BNP Aqua": "Akciové",
-        "BNP US Growth": "Akciové",
-        "BNP Disruptive Technology": "Akciové",
-        "Erste Responsible Stock America": "Akciové",
-        "Goldman Sachs US Enhanced Equity": "Akciové",
-        "Franklin Technology": "Akciové",
-        "Franklin U.S. Opportunities": "Akciové",
-        "Fidelity Global Dividend": "Akciové",
-        "Fidelity Global Financial Services": "Akciové",
-        "Fidelity Global Quality Income": "Akciové",
-        "Fidelity Global Bond": "Dluhopisy",
-        "SUSTAINABLE GLOBAL CORPORATE BOND": "Dluhopisy",
-        "BNPP Flexi I Flexible Convertible Bond": "Dluhopisy",
-        "Franklin U.S. Government Fund": "Dluhopisy",
-        "Franklin U.S. Government Fund USD": "Dluhopisy",
-        "GOLDMAN SACHS USD GREEN BOND": "Dluhopisy",
-        "Franklin U.S. Dollar Short-Term Money Market": "Peněžní trh",
-        "BNP Paribas Funds USD Money Market": "Peněžní trh",
-        "Měnový prémiový vklad v USD 06/2023": "Peněžní trh",
-        "BNP Paribas Flexi I Commodities": "Komodity",
-        "Fidelity Funds - Global High Yield Fund A-ACC-USD": "Dluhopisy HY",
-        "Fidelity Funds - Emerging Market Corporate Debt Fund A-ACC-USD": "Dluhopisy HY",
-      };
-      function getFundCategory(name, currency) {
-        const map = currency === "CZK" ? FUND_CATEGORIES_CZK : currency === "EUR" ? FUND_CATEGORIES_EUR : FUND_CATEGORIES_USD;
-        return map[name] || "Akciové";
+      function getFundCategoryInfo(fundName, currency, isin, sleeve) {
+        const byIsin = isin ? FUND_CLASSIFICATION_BY_ISIN[String(isin).trim()] : null;
+        if (byIsin) {
+          return { ...byIsin, categoryLabel: `${byIsin.main} · ${byIsin.sub}` };
+        }
+        if (sleeve === "Úroková složka") {
+          return { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy", categoryLabel: "Dluhopisové fondy · Korporátní dluhopisy" };
+        }
+        if (sleeve === "Alternativní složka") {
+          return { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy", categoryLabel: "Dluhopisové fondy · Nemovitosti a alternativy" };
+        }
+        return { main: "Akciové fondy", sub: "Global", categoryLabel: "Akciové fondy · Global" };
       }
 
       const NENI_FUND_COLORS = [
@@ -5379,14 +5454,9 @@
         "#be123c","#0a1e3f","#84cc16","#d97706","#4f46e5","#0d9488",
       ];
       const NENI_CATEGORY_COLORS = {
-        "Dluhopisy státní": "#0891b2",
-        "Dluhopisy korporátní": "#1e5fb8",
-        "Dluhopisy HY": "#7c3aed",
-        "Dluhopisy": "#1e5fb8",
-        "Komodity": "#d97706",
-        "Reality & Alternativy": "#c9a96e",
-        "Akciové": "#16a34a",
-        "Peněžní trh": "#64748b",
+        "Dluhopisové fondy": "#1e5fb8",
+        "Akciové fondy": "#16a34a",
+        "Sektorové fondy": "#7c3aed",
       };
 
       /* ------------------------------------------------------------------ */
@@ -5462,7 +5532,7 @@
       /* ------------------------------------------------------------------ */
       /*  Není investice jako investice — fund performance explorer          */
       /* ------------------------------------------------------------------ */
-      function NeniInvesticeApp({ onBack, onNavigate }) {
+      function NeniInvesticeApp({ onNavigate }) {
         const {
           currency,
           setCurrency,
@@ -5470,14 +5540,10 @@
           setInitialInvestment,
           monthlyContribution,
           setMonthlyContribution,
-          appMode,
-          setAppMode,
         } = useInvestment();
         const [category, setCategory] = useState("Vše");
         const [search, setSearch] = useState("");
         const [sleeveFilter, setSleeveFilter] = useState("Všechny složky");
-        const [sortKey, setSortKey] = useState("p1y");
-        const [sortDir, setSortDir] = useState("desc");
         const [selectedFunds, setSelectedFunds] = useState([]);
         const [viewMode, setViewMode] = useState("value");
         const [horizonMonths, setHorizonMonths] = useState(60);
@@ -5503,11 +5569,15 @@
         const allFunds = useMemo(() => {
           return activeCatalogFunds.map(({ name, sleeve }) => {
             const perf = perfData[name] || {};
+            const isin = isinFor(name);
+            const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
             return {
               name,
               sleeve,
-              isin: isinFor(name),
-              category: getFundCategory(name, currency),
+              isin,
+              category: categoryInfo.categoryLabel,
+              mainCategory: categoryInfo.main,
+              subCategory: categoryInfo.sub,
               p1y: perf.p1y ?? null,
               p3y: perf.p3y ?? null,
               p5y: perf.p5y ?? null,
@@ -5516,8 +5586,8 @@
         }, [activeCatalogFunds, perfData, activeIsins, currency]);
 
         const categories = useMemo(() => {
-          const cats = new Set(allFunds.map((f) => f.category));
-          return ["Vše", ...Array.from(cats).sort()];
+          const cats = new Set(allFunds.map((f) => f.mainCategory));
+          return ["Vše", ...MAIN_CATEGORY_ORDER.filter((cat) => cats.has(cat))];
         }, [allFunds]);
         const sleeveOptions = useMemo(() => {
           const sleeves = new Set(allFunds.map((f) => f.sleeve).filter(Boolean));
@@ -5531,7 +5601,7 @@
 
         const filtered = useMemo(() => {
           let list = allFunds;
-          if (category !== "Vše") list = list.filter((f) => f.category === category);
+          if (category !== "Vše") list = list.filter((f) => f.mainCategory === category);
           if (sleeveFilter !== "Všechny složky") list = list.filter((f) => f.sleeve === sleeveFilter);
           if (search.trim()) {
             const q = search.trim().toLowerCase();
@@ -5542,20 +5612,19 @@
             );
           }
           list = [...list].sort((a, b) => {
-            const aVal = a[sortKey];
-            const bVal = b[sortKey];
-            if (aVal === null && bVal === null) return 0;
-            if (aVal === null) return 1;
-            if (bVal === null) return -1;
-            return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+            const mainRankA = MAIN_CATEGORY_ORDER.indexOf(a.mainCategory);
+            const mainRankB = MAIN_CATEGORY_ORDER.indexOf(b.mainCategory);
+            const mainDiff = (mainRankA === -1 ? 99 : mainRankA) - (mainRankB === -1 ? 99 : mainRankB);
+            if (mainDiff !== 0) return mainDiff;
+            const subOrder = SUBCATEGORY_ORDER[a.mainCategory] || [];
+            const subRankA = subOrder.indexOf(a.subCategory);
+            const subRankB = subOrder.indexOf(b.subCategory);
+            const subDiff = (subRankA === -1 ? 99 : subRankA) - (subRankB === -1 ? 99 : subRankB);
+            if (subDiff !== 0) return subDiff;
+            return a.name.localeCompare(b.name, "cs");
           });
           return list;
-        }, [allFunds, category, sleeveFilter, search, sortKey, sortDir]);
-
-        const toggleSort = (key) => {
-          if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-          else { setSortKey(key); setSortDir("desc"); }
-        };
+        }, [allFunds, category, sleeveFilter, search]);
 
         const toggleFund = (name) => {
           setSelectedFunds((prev) =>
@@ -5673,17 +5742,26 @@
         );
         const finalRow = displayData.length ? displayData[displayData.length - 1] : null;
         const chartLabelValue = viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota";
+        const neniDataKeys = useMemo(
+          () => compFunds.map((f) => (viewMode === "percent" ? `${f.name}Pct` : f.name)),
+          [compFunds, viewMode]
+        );
+        const neniYDomain = useMemo(
+          () =>
+            computeChartDomain(
+              displayData,
+              neniDataKeys,
+              viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
+              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05)
+            ),
+          [displayData, neniDataKeys, viewMode, initialInvestment]
+        );
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "Poslední rok" },
           { label: "3R", months: 36, title: "Poslední 3 roky" },
           { label: "5L", months: 60, title: "5 let" },
           { label: "Vlastní", months: "custom", title: "Vlastní rozsah dat" },
         ];
-
-        const SortArrow = ({ k }) => {
-          if (sortKey !== k) return <span className="text-slate-300 ml-0.5">↕</span>;
-          return <span className="text-ep-blue ml-0.5">{sortDir === "desc" ? "↓" : "↑"}</span>;
-        };
 
         const fmtPct = (v) => {
           if (v === null || v === undefined) return <span className="text-slate-400">–</span>;
@@ -5698,27 +5776,17 @@
         return (
           <div className="min-h-screen" style={{ background: "#f6f8fc" }}>
             {/* Header */}
-            <AppSwitchBar activeScreen="neni-investice" onNavigate={onNavigate} />
-            <header className="sticky top-[37px] z-40 bg-ep-gradient text-white shadow-premium">
+            <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
               <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
               <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
                 <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
                   <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={onBack}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/8 text-white/80 transition hover:bg-white/15 hover:text-white"
-                    aria-label="Zpět na výběr"
-                    style={{ background: "rgba(255,255,255,0.08)" }}
-                  >
-                    ←
-                  </button>
                   <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5">
                     <BarChart3Icon size={20} className="text-ep-gold" />
                   </div>
                     <div className="leading-tight">
                       <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
-                        {appMode === "erste-premier" ? "ERSTE\u00a0PREMIER" : "MASS\u00a0AFFLUENT"}
+                        ERSTE&nbsp;PREMIER
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
@@ -5840,6 +5908,7 @@
                       Porovnejte historické výkonnosti fondů z nabídky Erste Premier.
                       Vyberte fondy pro detailní srovnání a zjistěte, jak se od sebe skutečně liší.
                     </p>
+                    <SectionSwitchBar activeScreen="neni-investice" onNavigate={onNavigate} />
                   </div>
                 </div>
               </section>
@@ -5906,22 +5975,16 @@
                           <th className="w-8 px-3 py-2.5 text-left"></th>
                           <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest text-slate-500">Fond</th>
                           <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest text-slate-500">Kategorie</th>
-                          <th className="cursor-pointer px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-800 select-none" onClick={() => toggleSort("p1y")}>
-                            1 rok p.a. <SortArrow k="p1y" />
-                          </th>
-                          <th className="cursor-pointer px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-800 select-none" onClick={() => toggleSort("p3y")}>
-                            3 roky p.a. <SortArrow k="p3y" />
-                          </th>
-                          <th className="cursor-pointer px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-800 select-none" onClick={() => toggleSort("p5y")}>
-                            5 let p.a. <SortArrow k="p5y" />
-                          </th>
+                          <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-slate-500">1 rok p.a.</th>
+                          <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-slate-500">3 roky p.a.</th>
+                          <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-slate-500">5 let p.a.</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {filtered.map((fund) => {
                           const selected = selectedFunds.includes(fund.name);
                           const colorIdx = selectedFunds.indexOf(fund.name);
-                          const dotColor = colorIdx >= 0 ? NENI_FUND_COLORS[colorIdx % NENI_FUND_COLORS.length] : NENI_CATEGORY_COLORS[fund.category] || "#1e5fb8";
+                          const dotColor = colorIdx >= 0 ? NENI_FUND_COLORS[colorIdx % NENI_FUND_COLORS.length] : NENI_CATEGORY_COLORS[fund.mainCategory] || "#1e5fb8";
                           return (
                             <tr
                               key={fund.name}
@@ -5949,7 +6012,7 @@
                               </td>
                               <td className="px-4 py-2.5">
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                  style={{ background: (NENI_CATEGORY_COLORS[fund.category] || "#64748b") + "18", color: NENI_CATEGORY_COLORS[fund.category] || "#64748b" }}>
+                                  style={{ background: (NENI_CATEGORY_COLORS[fund.mainCategory] || "#64748b") + "18", color: NENI_CATEGORY_COLORS[fund.mainCategory] || "#64748b" }}>
                                   {fund.category}
                                 </span>
                               </td>
@@ -6095,6 +6158,7 @@
                           <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
                           <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
                           <YAxis
+                            domain={neniYDomain}
                             tickFormatter={(v) =>
                               viewMode === "percent"
                                 ? `${Number(v).toFixed(0)} %`
@@ -6186,7 +6250,7 @@
       }
 
       function App() {
-        const [screen, setScreen] = useState("home");
+        const [screen, setScreen] = useState("zpetna-modelace");
 
         useEffect(() => {
           const loader = document.getElementById("boot-loader");
@@ -6196,11 +6260,10 @@
           }
         }, []);
 
-        if (screen === "home") return <HomeScreen onNavigate={setScreen} />;
         return (
           <InvestmentProvider>
             {screen === "neni-investice" ? (
-              <NeniInvesticeApp onBack={() => setScreen("home")} onNavigate={setScreen} />
+              <NeniInvesticeApp onNavigate={setScreen} />
             ) : (
               <Index onNavigate={setScreen} />
             )}
