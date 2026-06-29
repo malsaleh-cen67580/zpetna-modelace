@@ -3332,7 +3332,7 @@
         const years = months / 12;
         return (Math.pow(end / start, 1 / years) - 1) * 100;
       }
-      function computeChartDomain(dataRows, dataKeys, fallbackMin = 0, fallbackMax = 100) {
+      function computeChartDomain(dataRows, dataKeys, fallbackMin = 0, fallbackMax = 100, anchorValue = null) {
         const values = [];
         (dataRows || []).forEach((row) => {
           (dataKeys || []).forEach((key) => {
@@ -3340,6 +3340,7 @@
             if (Number.isFinite(val)) values.push(val);
           });
         });
+        if (anchorValue !== null && Number.isFinite(anchorValue)) values.push(anchorValue);
         if (!values.length) return [fallbackMin, fallbackMax];
         const min = Math.min(...values);
         const max = Math.max(...values);
@@ -3347,7 +3348,8 @@
           const pad = Math.max(Math.abs(min) * 0.05, 1);
           return [min - pad, max + pad];
         }
-        const pad = (max - min) * 0.06;
+        const range = max - min;
+        const pad = range * 0.08;
         return [min - pad, max + pad];
       }
       function stddev(values) {
@@ -3728,7 +3730,6 @@
           { name: "Fidelity Funds - Global High Yield Fund A-ACC-USD", sleeve: "Úroková složka", isin: "LU0740037022" },
           { name: "SUSTAINABLE GLOBAL CORPORATE BOND", sleeve: "Úroková složka", isin: "LU0282388437" },
           { name: "BNPP Flexi I Flexible Convertible Bond", sleeve: "Úroková složka", isin: "LU2020653767" },
-          { name: "Franklin U.S. Government Fund", sleeve: "Úroková složka", isin: "LU0138076046" },
           { name: "Franklin U.S. Government Fund USD", sleeve: "Úroková složka", isin: "LU0543330301" },
           { name: "GOLDMAN SACHS USD GREEN BOND", sleeve: "Úroková složka", isin: "LU2578936853" },
           { name: "Franklin U.S. Dollar Short-Term Money Market", sleeve: "Úroková složka", isin: "LU0128526901" },
@@ -4218,7 +4219,8 @@
               displayData,
               activeDataKeys,
               viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
-              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05)
+              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
+              viewMode === "percent" ? null : initialInvestment
             ),
           [displayData, activeDataKeys, viewMode, initialInvestment]
         );
@@ -4406,11 +4408,12 @@
                   <YAxis domain={yDomain} tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
+                  <ReferenceLine y={viewMode === "percent" ? 0 : initialInvestment} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
                   {showSleeves && canSplitSleeves
                     ? activeSleeveSeries.map((series) => (
                         <Area
                           key={series.key}
-                          type="monotone"
+                          type="linear"
                           name={series.label}
                           dataKey={series.dataKey}
                           stroke={series.color}
@@ -4421,13 +4424,13 @@
                         />
                       ))
                     : (
-                        <Area type="monotone" name="Vybrané portfolio" dataKey={portfolioKey} stroke="#1e5fb8" strokeWidth={2.5} fill={`url(#${portfolioGradientId})`} activeDot={{ r: 4 }} />
+                        <Area type="linear" name="Vybrané portfolio" dataKey={portfolioKey} stroke="#1e5fb8" strokeWidth={2.5} fill={`url(#${portfolioGradientId})`} activeDot={{ r: 4 }} />
                       )}
-                  <Area type="monotone" name={viewMode === "percent" ? "Reálná změna po inflaci" : "Reálná hodnota po inflaci"} dataKey={inflationKey} stroke="#0f766e" strokeWidth={2.6} strokeDasharray="6 4" fill="transparent" activeDot={{ r: 3.5 }} />
+                  <Area type="linear" name={viewMode === "percent" ? "Reálná změna po inflaci" : "Reálná hodnota po inflaci"} dataKey={inflationKey} stroke="#0f766e" strokeWidth={2.6} strokeDasharray="6 4" fill="transparent" activeDot={{ r: 3.5 }} />
                 {!showSleeves && activeComparisonStrategies.map((strategy) => (
                   <Area
                     key={strategy.id}
-                    type="monotone"
+                   type="linear"
                     name={`Srovnání ${strategy.name.replace("RŘC", "RŘC ")}`}
                     dataKey={`comparison_${strategy.id}`}
                     stroke={strategy.color}
@@ -5373,7 +5376,6 @@
         LU0111548326: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0012186622: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0083138064: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0138076046: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0543330301: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0128526901: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         UCER270624: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
@@ -5802,7 +5804,8 @@
               displayData,
               neniDataKeys,
               viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
-              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05)
+              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
+              viewMode === "percent" ? null : initialInvestment
             ),
           [displayData, neniDataKeys, viewMode, initialInvestment]
         );
@@ -6231,7 +6234,7 @@
                           {compFunds.map((f, idx) => (
                             <Area
                               key={f.name}
-                              type="monotone"
+                              type="linear"
                               dataKey={viewMode === "percent" ? `${f.name}Pct` : f.name}
                               name={f.name}
                               stroke={NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length]}
