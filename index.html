@@ -3770,7 +3770,9 @@
       const FX_RATES_IN_CZK = { CZK: 1, EUR: AVG_CZK_PER_EUR, USD: AVG_CZK_PER_USD };
       function convertAmount(amount, from, to) {
         if (from === to) return amount;
-        return Math.round((amount * FX_RATES_IN_CZK[from]) / FX_RATES_IN_CZK[to]);
+        const raw = (amount * FX_RATES_IN_CZK[from]) / FX_RATES_IN_CZK[to];
+        const step = to === "CZK" ? 1000 : 100;
+        return Math.round(raw / step) * step;
       }
       const InvestmentContext = createContext(null);
 
@@ -4159,31 +4161,52 @@
           } else {
             filtered = data;
           }
-          // Rebase: ensure first data point starts exactly at initialInvestment (value mode only)
+          // Rebase: ensure every series starts exactly at initialInvestment (value mode only).
+          // Use independent per-series scale factors so inflation, sleeves, and comparison
+          // lines all start at initialInvestment, not just the portfolio line.
           if (filtered.length > 0 && viewMode !== "percent") {
-            const firstPortfolio = filtered[0].portfolio;
-            if (firstPortfolio && Math.abs(firstPortfolio - initialInvestment) > 0.01) {
-              const baseScale = initialInvestment / firstPortfolio;
-              // Compute independent scale factors for each comparison strategy
+            const firstRow = filtered[0];
+            const portfolioScale = firstRow.portfolio > 0 ? initialInvestment / firstRow.portfolio : 1;
+            const inflationScale = firstRow.inflation > 0 ? initialInvestment / firstRow.inflation : portfolioScale;
+            const contributedScale = firstRow.contributed > 0 ? initialInvestment / firstRow.contributed : portfolioScale;
+            const needsRebase = Math.abs(firstRow.portfolio - initialInvestment) > 0.01
+              || Math.abs(firstRow.inflation - initialInvestment) > 0.01;
+            if (needsRebase) {
+              // Per-comparison independent scale factors
               const compScales = {};
               COMPARISON_STRATEGIES.forEach((strategy) => {
                 const key = "comparison_" + strategy.id;
-                const firstVal = filtered[0][key];
+                const firstVal = firstRow[key];
                 compScales[key] = (firstVal && firstVal > 0) ? initialInvestment / firstVal : 1;
               });
-              return filtered.map((row) => {
+              return filtered.map((row, i) => {
+                if (i === 0) {
+                  // Start anchor: every active series set explicitly to initialInvestment
+                  const anchor = { ...row, isStartAnchor: true };
+                  anchor.portfolio = initialInvestment;
+                  anchor.inflation = initialInvestment;
+                  anchor.contributed = initialInvestment;
+                  COMPARISON_STRATEGIES.forEach((strategy) => {
+                    const key = "comparison_" + strategy.id;
+                    if (anchor[key] !== undefined) anchor[key] = initialInvestment;
+                  });
+                  SLEEVE_SERIES.forEach(({ key }) => {
+                    if (anchor[key] !== undefined) anchor[key] = anchor[key] * portfolioScale;
+                  });
+                  return anchor;
+                }
                 const rebased = {
                   ...row,
-                  portfolio: row.portfolio * baseScale,
-                  inflation: row.inflation * baseScale,
-                  contributed: row.contributed * baseScale,
+                  portfolio: row.portfolio * portfolioScale,
+                  inflation: row.inflation * inflationScale,
+                  contributed: row.contributed * contributedScale,
                 };
                 COMPARISON_STRATEGIES.forEach((strategy) => {
                   const key = "comparison_" + strategy.id;
                   if (row[key] !== undefined) rebased[key] = row[key] * compScales[key];
                 });
                 SLEEVE_SERIES.forEach(({ key }) => {
-                  if (row[key] !== undefined) rebased[key] = row[key] * baseScale;
+                  if (row[key] !== undefined) rebased[key] = row[key] * portfolioScale;
                 });
                 return rebased;
               });
@@ -5356,16 +5379,16 @@
       /* ------------------------------------------------------------------ */
       /*  Fund categories for "Není investice jako investice"              */
       /* ------------------------------------------------------------------ */
-      const MAIN_CATEGORY_ORDER = ["Dluhopisové fondy", "Akciové fondy", "Sektorové fondy"];
+      const MAIN_CATEGORY_ORDER = ["Dluhopisové fondy", "Akciové fondy", "Alternativní fondy", "Sektorové fondy"];
       const SUBCATEGORY_ORDER = {
         "Dluhopisové fondy": [
+          "Státní dluhopisy",
           "Státní a krátkodobé dluhopisy",
           "Korporátní dluhopisy",
           "High Yield dluhopisy a Emerging Markets",
-          "Komodity",
-          "Nemovitosti a alternativy",
         ],
         "Akciové fondy": ["Global", "Severní Amerika", "Evropa", "Asie"],
+        "Alternativní fondy": ["Komodity", "Nemovitosti a alternativy"],
         "Sektorové fondy": ["Sektorové fondy"],
       };
       const FUND_CLASSIFICATION_BY_ISIN = {
@@ -5373,12 +5396,18 @@
         CZ0008472263: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0082087437: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0768356593: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0111548326: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0111548326: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
         LU0012186622: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         LU0083138064: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0543330301: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0543330301: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
         LU0128526901: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
         UCER270624: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
+        LU0093669546: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
+        LU0251130638: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
+        AT0000673215: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
+        LU0294219869: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
+        LU0252652382: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
+        LU0546916619: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
         CZ0008472230: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
         LU1022391483: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
         LU1692483032: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
@@ -5387,6 +5416,9 @@
         LU0282388437: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
         LU0131210360: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
         LU0496369546: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0546917773: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
+        LU0131126574: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0131126228: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
         LU1114574418: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
         LU0979393146: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
         CZ0008472412: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
@@ -5394,20 +5426,25 @@
         AT0000673280: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
         LU0900495697: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
         LU0740037022: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        AT0000A1E119: { main: "Dluhopisové fondy", sub: "Komodity" },
-        LU1931956954: { main: "Dluhopisové fondy", sub: "Komodity" },
-        LU1931956285: { main: "Dluhopisové fondy", sub: "Komodity" },
-        CZ0008472545: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        CZ0008476280: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU0823394423: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU0823394852: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU0629872945: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU2020654062: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU2020654575: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU2020653924: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU2020653767: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        LU2155808657: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
-        AT0000613617: { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy" },
+        LU0922501720: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0546918664: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0300743944: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        LU0300740767: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
+        AT0000A1E119: { main: "Alternativní fondy", sub: "Komodity" },
+        LU1931956954: { main: "Alternativní fondy", sub: "Komodity" },
+        LU1931956285: { main: "Alternativní fondy", sub: "Komodity" },
+        CZ0008472545: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        CZ0008476280: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU0823394423: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU0823394852: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU0629872945: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU2020654062: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU2020654575: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU2020653924: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU2020653767: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU2155808657: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        AT0000613617: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
+        LU0523919115: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
         CZ0008472404: { main: "Akciové fondy", sub: "Global" },
         CZ0008475043: { main: "Akciové fondy", sub: "Global" },
         AT0000A1AW14: { main: "Akciové fondy", sub: "Global" },
@@ -5469,7 +5506,7 @@
           return { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy", categoryLabel: "Dluhopisové fondy · Korporátní dluhopisy" };
         }
         if (sleeve === "Alternativní složka") {
-          return { main: "Dluhopisové fondy", sub: "Nemovitosti a alternativy", categoryLabel: "Dluhopisové fondy · Nemovitosti a alternativy" };
+          return { main: "Alternativní fondy", sub: "Nemovitosti a alternativy", categoryLabel: "Alternativní fondy · Nemovitosti a alternativy" };
         }
         return { main: "Akciové fondy", sub: "Global", categoryLabel: "Akciové fondy · Global" };
       }
@@ -5481,6 +5518,7 @@
       const NENI_CATEGORY_COLORS = {
         "Dluhopisové fondy": "#1e5fb8",
         "Akciové fondy": "#16a34a",
+        "Alternativní fondy": "#d97706",
         "Sektorové fondy": "#7c3aed",
       };
 
@@ -5567,6 +5605,7 @@
           setMonthlyContribution,
         } = useInvestment();
         const [category, setCategory] = useState("Vše");
+        const [subCategory, setSubCategory] = useState("Všechny podtřídy");
         const [search, setSearch] = useState("");
         const [sleeveFilter, setSleeveFilter] = useState("Všechny složky");
         const [selectedFunds, setSelectedFunds] = useState([]);
@@ -5614,6 +5653,18 @@
           const cats = new Set(allFunds.map((f) => f.mainCategory));
           return ["Vše", ...MAIN_CATEGORY_ORDER.filter((cat) => cats.has(cat))];
         }, [allFunds]);
+        // Sub-categories available for the currently selected main category
+        const subCategories = useMemo(() => {
+          const relevantFunds = category === "Vše" ? allFunds : allFunds.filter((f) => f.mainCategory === category);
+          const subs = new Set(relevantFunds.map((f) => f.subCategory).filter(Boolean));
+          const orderedSubs = (SUBCATEGORY_ORDER[category] || []).filter((s) => subs.has(s));
+          const extraSubs = Array.from(subs).filter((s) => !orderedSubs.includes(s)).sort();
+          return ["Všechny podtřídy", ...orderedSubs, ...extraSubs];
+        }, [allFunds, category]);
+        // Reset sub-category when main category changes
+        useEffect(() => {
+          if (!subCategories.includes(subCategory)) setSubCategory("Všechny podtřídy");
+        }, [subCategories, subCategory]);
         const sleeveOptions = useMemo(() => {
           const sleeves = new Set(allFunds.map((f) => f.sleeve).filter(Boolean));
           return ["Všechny složky", ...Array.from(sleeves).sort()];
@@ -5627,6 +5678,7 @@
         const filtered = useMemo(() => {
           let list = allFunds;
           if (category !== "Vše") list = list.filter((f) => f.mainCategory === category);
+          if (subCategory !== "Všechny podtřídy") list = list.filter((f) => f.subCategory === subCategory);
           if (sleeveFilter !== "Všechny složky") list = list.filter((f) => f.sleeve === sleeveFilter);
           if (search.trim()) {
             const q = search.trim().toLowerCase();
@@ -5649,7 +5701,7 @@
             return a.name.localeCompare(b.name, "cs");
           });
           return list;
-        }, [allFunds, category, sleeveFilter, search]);
+        }, [allFunds, category, subCategory, sleeveFilter, search]);
 
         const toggleFund = (name) => {
           setSelectedFunds((prev) =>
@@ -5753,7 +5805,8 @@
           } else {
             filtered = growthData;
           }
-          // Rebase: ensure each fund's first visible data point = initialInvestment (value mode only)
+          // Rebase: ensure each fund's first visible data point = initialInvestment (value mode only).
+          // Use per-fund scale factors and an explicit start anchor at the first filtered point.
           if (filtered.length > 0 && viewMode !== "percent" && compFunds.length > 0) {
             const fundScales = {};
             let needsRebase = false;
@@ -5767,7 +5820,13 @@
               }
             });
             if (needsRebase) {
-              return filtered.map((row) => {
+              return filtered.map((row, i) => {
+                if (i === 0) {
+                  // Start anchor: every fund explicitly set to initialInvestment
+                  const anchor = { ...row, isStartAnchor: true };
+                  compFunds.forEach((f) => { anchor[f.name] = initialInvestment; });
+                  return anchor;
+                }
                 const rebased = { ...row };
                 compFunds.forEach((f) => {
                   if (row[f.name] !== null && row[f.name] !== undefined) {
@@ -5936,7 +5995,7 @@
                     {["CZK", "EUR", "USD"].map((c) => {
                       const active = currency === c;
                       return (
-                        <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); }}
+                        <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
                           className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
                           {c}
                         </button>
@@ -5966,7 +6025,7 @@
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex flex-wrap gap-2">
                         {categories.map((cat) => (
-                          <button key={cat} type="button" onClick={() => setCategory(cat)}
+                          <button key={cat} type="button" onClick={() => { setCategory(cat); setSubCategory("Všechny podtřídy"); }}
                             className={"rounded-full px-3 py-1.5 text-xs font-semibold transition-all " +
                               (category === cat
                                 ? "bg-ep-navy text-white shadow-sm"
@@ -5999,6 +6058,22 @@
                         </select>
                       </div>
                     </div>
+                    {/* Subcategory filter row */}
+                    {subCategories.length > 1 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {subCategories.map((sub) => (
+                          <button key={sub} type="button" onClick={() => setSubCategory(sub)}
+                            className={"rounded-full px-2.5 py-1 text-[11px] font-medium transition-all " +
+                              (subCategory === sub
+                                ? "bg-ep-navy/80 text-white shadow-sm"
+                                : "border border-slate-200 bg-slate-50 text-slate-500 hover:border-ep-blue/20 hover:bg-slate-100")
+                            }
+                          >
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {selectedFunds.length > 0 && (
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Vybrané pro srovnání:</span>
@@ -6059,8 +6134,13 @@
                               <td className="px-4 py-2.5">
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                   style={{ background: (NENI_CATEGORY_COLORS[fund.mainCategory] || "#64748b") + "18", color: NENI_CATEGORY_COLORS[fund.mainCategory] || "#64748b" }}>
-                                  {fund.category}
+                                 {fund.mainCategory}
                                 </span>
+                               {fund.subCategory && (
+                                 <span className="ml-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
+                                   {fund.subCategory}
+                                 </span>
+                               )}
                               </td>
                               <td className="px-4 py-2.5 text-right">{fmtPct(fund.p1y)}</td>
                               <td className="px-4 py-2.5 text-right">{fmtPct(fund.p3y)}</td>
