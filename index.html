@@ -3153,16 +3153,16 @@
       function simulationProfileForFund(fundName, currency = "CZK", sleeve = "") {
         const isin = KNOWN_ISINS_BY_CURRENCY?.[currency]?.[fundName] || "";
         const cat = getFundCategoryInfo(fundName, currency, isin, sleeve);
-        if (cat.main === "Sektorové fondy") return "sector";
-        if (cat.main === "Akciové fondy") {
+        if (cat.sub === "Sektory" || cat.sub === "Udržitelnost") return "sector";
+        if (cat.main === "Akciové") {
           if (cat.sub === "Severní Amerika") return "equityNorthAmerica";
           if (cat.sub === "Evropa") return "equityEurope";
-          if (cat.sub === "Asie") return "equityAsia";
+          if (cat.sub === "Asie" || cat.sub === "Akcie rozvíjející se trhy" || cat.sub === "Akcie rozvíjející se trhy CEE") return "equityAsia";
           return "equityGlobal";
         }
-        if (cat.sub === "Státní a krátkodobé dluhopisy") return "govBonds";
+        if (cat.sub === "Státní a krátkodobé dluhopisy" || cat.sub === "Státní dluhopisy" || cat.sub === "Peněžní trh") return "govBonds";
         if (cat.sub === "Korporátní dluhopisy") return "corpBonds";
-        if (cat.sub === "High Yield dluhopisy a Emerging Markets") return "highYield";
+        if (cat.sub === "High Yield dluhopisy" || cat.sub === "Emerging markets dluhopisy" || cat.sub === "Konvertibilní dluhopisy") return "highYield";
         if (cat.sub === "Komodity") return "commodities";
         return "alternatives";
       }
@@ -3751,114 +3751,153 @@
 
       const FUND_CATALOG_BY_CURRENCY = {
         CZK: [
-          { name: "Sporoinvest", sleeve: "Úroková složka", isin: "CZ0008472271" },
-          { name: "Sporobond", sleeve: "Úroková složka", isin: "CZ0008472263" },
-          { name: "Goldman Sachs Czech Crown Bond", sleeve: "Úroková složka", isin: "LU0082087437" },
-          { name: "Templeton Global Bond", sleeve: "Úroková složka", isin: "LU0768356593" },
-          { name: "ČS korporátní dluhopisový", sleeve: "Úroková složka", isin: "CZ0008472230" },
-          { name: "BNP Euro Corporate Bond", sleeve: "Úroková složka", isin: "LU1022391483" },
-          { name: "Fidelity Global Income Fund", sleeve: "Úroková složka", isin: "LU1692483032" },
-          { name: "High Yield dluhopisový", sleeve: "Úroková složka", isin: "CZ0008472412" },
-          { name: "Fidelity Global High Yield", sleeve: "Úroková složka", isin: "LU1114574418" },
-          { name: "Fidelity European High Yield", sleeve: "Úroková složka", isin: "LU0979393146" },
-          { name: "Trendbond", sleeve: "Úroková složka", isin: "CZ0008472297" },
-          { name: "Top Stocks", sleeve: "Akciová složka", isin: "CZ0008472404" },
-          { name: "Stock Small Caps", sleeve: "Akciová složka", isin: "CZ0008475043" },
-          { name: "Erste Responsible Stock Global", sleeve: "Akciová složka", isin: "AT0000A1AW14" },
-          { name: "Fidelity World Fund", sleeve: "Akciová složka", isin: "LU1400167216" },
-          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0979392924" },
-          { name: "Goldman Sachs Global Sustainable Equity", sleeve: "Akciová složka", isin: "LU1542713687" },
-          { name: "Invesco Metaverse and AI Fund", sleeve: "Akciová složka", isin: "LU2484078758" },
+          { name: "ERSTE STOCK EM GLOBAL (VT)", sleeve: "Akciová složka", isin: "AT0000A10QN3" },
+          { name: "BNPPF Asia ex-Japan Equity", sleeve: "Akciová složka", isin: "LU3215558704" },
+          { name: "Fidelity Asian Special Situations", sleeve: "Akciová složka", isin: "LU1213835512" },
+          { name: "Goldman Sachs Japan Equity", sleeve: "Akciová složka", isin: "LU0429745879" },
+          { name: "Templeton Asian Growth", sleeve: "Akciová složka", isin: "LU0768356247" },
+          { name: "BNP Euro Equity", sleeve: "Akciová složka", isin: "LU0823401228" },
+          { name: "BNP Nordic Small Cap", sleeve: "Akciová složka", isin: "LU2451817873" },
+          { name: "Erste Responsible Stock Europe", sleeve: "Akciová složka", isin: "AT0000A2QP89" },
+          { name: "Franklin Mutual European", sleeve: "Akciová složka", isin: "LU0768356080" },
+          { name: "Goldman Sachs Central European Equity", sleeve: "Akciová složka", isin: "LU0082087353" },
+          { name: "Sporotrend", sleeve: "Akciová složka", isin: "CZ0008472289" },
           { name: "BlueSphere World Equity UCITS ETF Accum Hedged", sleeve: "Akciová složka", isin: "IE000YC7FPB6" },
-          { name: "Goldman Sachs Patrimonial Aggressive", sleeve: "Akciová složka", isin: "LU0405489047" },
+          { name: "Erste Responsible Stock Global", sleeve: "Akciová složka", isin: "AT0000A1AW14" },
+          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0979392924" },
+          { name: "Fidelity World Fund", sleeve: "Akciová složka", isin: "LU1400167216" },
+          { name: "Goldman Sachs Global Sustainable Equity", sleeve: "Akciová složka", isin: "LU1542713687" },
+          { name: "Stock Small Caps", sleeve: "Akciová složka", isin: "CZ0008475043" },
+          { name: "Top Stocks", sleeve: "Akciová složka", isin: "CZ0008472404" },
+          { name: "Allianz Artificial Intelligence", sleeve: "Akciová složka", isin: "LU1641601064" },
+          { name: "BNP Disruptive Technology", sleeve: "Akciová složka", isin: "LU1789409619" },
+          { name: "BNP Health Care Innovators", sleeve: "Akciová složka", isin: "LU2739071228" },
+          { name: "Erste Security Invest", sleeve: "Akciová složka", isin: "AT0000A3N017" },
+          { name: "Erste Stock Biotec", sleeve: "Akciová složka", isin: "AT0000A0XYP0" },
+          { name: "Fidelity Global Industrials", sleeve: "Akciová složka", isin: "LU2898087106" },
+          { name: "Invesco Metaverse and AI Fund", sleeve: "Akciová složka", isin: "LU2484078758" },
+          { name: "BNP US Growth", sleeve: "Akciová složka", isin: "LU0823434310" },
           { name: "Erste Responsible Stock America", sleeve: "Akciová složka", isin: "AT0000639463" },
           { name: "Fidelity America Fund", sleeve: "Akciová složka", isin: "LU0979392767" },
           { name: "Goldman Sachs US Enhanced Equity", sleeve: "Akciová složka", isin: "LU0405488825" },
-          { name: "BNP US Growth", sleeve: "Akciová složka", isin: "LU0823434310" },
-          { name: "Sporotrend", sleeve: "Akciová složka", isin: "CZ0008472289" },
-          { name: "Erste Responsible Stock Europe", sleeve: "Akciová složka", isin: "AT0000A2QP89" },
-          { name: "Goldman Sachs Central European Equity", sleeve: "Akciová složka", isin: "LU0082087353" },
-          { name: "BNP Euro Equity", sleeve: "Akciová složka", isin: "LU0823401228" },
-          { name: "BNP Nordic Small Cap", sleeve: "Akciová složka", isin: "LU2451817873" },
-          { name: "Franklin Mutual European", sleeve: "Akciová složka", isin: "LU0768356080" },
-          { name: "Fidelity Asian Special Situations", sleeve: "Akciová složka", isin: "LU1213835512" },
-          { name: "BNPPF Asia ex-Japan Equity", sleeve: "Akciová složka", isin: "LU3215558704" },
-          { name: "Templeton Asian Growth", sleeve: "Akciová složka", isin: "LU0768356247" },
-          { name: "Goldman Sachs Japan Equity", sleeve: "Akciová složka", isin: "LU0429745879" },
-          { name: "Erste Stock EM Global VT", sleeve: "Akciová složka", isin: "AT0000A10QN3" },
-          { name: "Erste Stock Biotec", sleeve: "Akciová složka", isin: "AT0000A0XYP0" },
-          { name: "Erste Security Invest", sleeve: "Akciová složka", isin: "AT0000A3N017" },
-          { name: "BNP Disruptive Technology", sleeve: "Akciová složka", isin: "LU1789409619" },
-          { name: "Goldman Sachs Social Impact Equity", sleeve: "Akciová složka", isin: "LU2033393641" },
-          { name: "Allianz Artificial Intelligence", sleeve: "Akciová složka", isin: "LU1641601064" },
-          { name: "Fidelity Global Industrials", sleeve: "Akciová složka", isin: "LU2898087106" },
+          { name: "BNP Aqua", sleeve: "Akciová složka", isin: "LU1458425730" },
           { name: "Erste WWF Stock Environment", sleeve: "Akciová složka", isin: "AT0000A044X2" },
           { name: "Goldman Sachs Global Climate & Environment", sleeve: "Akciová složka", isin: "LU0429746091" },
-          { name: "BNP Aqua", sleeve: "Akciová složka", isin: "LU1458425730" },
           { name: "Goldman Sachs Global Impact Opportunities", sleeve: "Akciová složka", isin: "LU0295015134" },
-          { name: "BNP Health Care Innovators", sleeve: "Akciová složka", isin: "LU2739071228" },
-          { name: "Erste Stock Commodities", sleeve: "Alternativní složka", isin: "AT0000A1E119" },
+          { name: "Goldman Sachs Social Impact Equity", sleeve: "Akciová složka", isin: "LU2033393641" },
+          { name: "Fidelity European High Yield", sleeve: "Úroková složka", isin: "LU0979393146" },
+          { name: "Fidelity Global High Yield", sleeve: "Úroková složka", isin: "LU1114574418" },
+          { name: "High Yield dluhopisový", sleeve: "Úroková složka", isin: "CZ0008472412" },
+          { name: "BNP Paribas Funds Global Convertible", sleeve: "Úroková složka", isin: "LU0823394423" },
+          { name: "BNPP Flexi I Absolute Return Convertible", sleeve: "Úroková složka", isin: "LU2020654062" },
+          { name: "BNPP Paribas Global Absolute Return", sleeve: "Úroková složka", isin: "LU2155808657" },
+          { name: "BNP Euro Corporate Bond", sleeve: "Úroková složka", isin: "LU1022391483" },
+          { name: "Fidelity Global Income Fund", sleeve: "Úroková složka", isin: "LU1692483032" },
+          { name: "ČS korporátní dluhopisový", sleeve: "Úroková složka", isin: "CZ0008472230" },
+          { name: "Goldman Sachs Czech Crown Bond", sleeve: "Úroková složka", isin: "LU0082087437" },
+          { name: "Sporobond", sleeve: "Úroková složka", isin: "CZ0008472263" },
+          { name: "Sporoinvest", sleeve: "Úroková složka", isin: "CZ0008472271" },
+          { name: "Templeton Global Bond", sleeve: "Úroková složka", isin: "LU0768356593" },
+          { name: "Trendbond", sleeve: "Úroková složka", isin: "CZ0008472297" },
           { name: "BNPP Flexi I Commodities", sleeve: "Alternativní složka", isin: "LU1931956954" },
-          { name: "Reico ČS Nemovitostní", sleeve: "Alternativní složka", isin: "CZ0008472545" },
-          { name: "Reico ČS Long lease", sleeve: "Alternativní složka", isin: "CZ0008476280" },
-          { name: "BNP Paribas Funds Global Convertible", sleeve: "Alternativní složka", isin: "LU0823394423" },
+          { name: "Erste Stock Commodities", sleeve: "Alternativní složka", isin: "AT0000A1E119" },
           { name: "Goldman Sachs Commodity Enhanced", sleeve: "Alternativní složka", isin: "LU0629872945" },
-          { name: "BNPP Flexi I Absolute Return Convertible", sleeve: "Alternativní složka", isin: "LU2020654062" },
-          { name: "BNPP Paribas Global Absolute Return", sleeve: "Alternativní složka", isin: "LU2155808657" },
+          { name: "Reico ČS Long lease", sleeve: "Alternativní složka", isin: "CZ0008476280" },
+          { name: "Reico ČS Nemovitostní", sleeve: "Alternativní složka", isin: "CZ0008472545" },
+          { name: "Goldman Sachs Patrimonial Aggressive", sleeve: "Alternativní složka", isin: "LU0405489047" },
         ],
         EUR: [
-          { name: "BNP Paribas Funds Aqua", sleeve: "Akciová složka", isin: "LU1165135440" },
-          { name: "Goldman Sachs Global Sustainable Equity", sleeve: "Akciová složka", isin: "LU0119216553" },
-          { name: "BNP Paribas Funds US Growth", sleeve: "Akciová složka", isin: "LU0823434237" },
-          { name: "BNP Paribas Funds Disruptive Technology", sleeve: "Akciová složka", isin: "LU0823421689" },
-          { name: "BNP Paribas Funds Euro Equity", sleeve: "Akciová složka", isin: "LU0823401574" },
-          { name: "ESPA STOCK BIOTEC (VT) EUR", sleeve: "Akciová složka", isin: "AT0000673165" },
           { name: "ESPA STOCK GLOBAL-EMERGING MARKETS (VT) EUR", sleeve: "Akciová složka", isin: "AT0000A00GK1" },
-          { name: "ERSTE Responsible Stock America VT", sleeve: "Akciová složka", isin: "AT0000A0A1P0" },
-          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0605515377" },
+          { name: "Fidelity Funds - Emerging Markets Fund A-ACC-Euro (hedged)", sleeve: "Akciová složka", isin: "LU1097728288" },
+          { name: "Templeton Emerging Markets Fund - A(acc)EUR-H1", sleeve: "Akciová složka", isin: "LU0626262082" },
+          { name: "ESPA STOCK EUROPE-EMERGING (VT) EUR", sleeve: "Akciová složka", isin: "AT0000673181" },
+          { name: "ESPA STOCK ISTANBUL (VT) EUR", sleeve: "Akciová složka", isin: "AT0000494893" },
+          { name: "NN (L) Emerging Europe Equity - X Cap EUR", sleeve: "Akciová složka", isin: "LU0113311731" },
+          { name: "Templeton Eastern Europe Fund - A(acc)EUR", sleeve: "Akciová složka", isin: "LU0078277505" },
+          { name: "BNP Paribas Funds Europe Dividend", sleeve: "Akciová složka", isin: "LU0111491469" },
+          { name: "BNP Paribas Funds Global Low Vol Equity", sleeve: "Akciová složka", isin: "LU0823417810" },
+          { name: "ESPA STOCK GLOBAL (VT) EUR", sleeve: "Akciová složka", isin: "AT0000673314" },
+          { name: "Fidelity Funds - Global Dividend Fund A-ACC-Euro", sleeve: "Akciová složka", isin: "LU0605515377" },
+          { name: "Franklin European Growth Fund - A(acc)EUR", sleeve: "Akciová složka", isin: "LU0122612848" },
+          { name: "Franklin Mutual European Fund - A(acc)EUR", sleeve: "Akciová složka", isin: "LU0140363002" },
+          { name: "Goldman Sachs Global High Dividend", sleeve: "Akciová složka", isin: "LU0146257711" },
+          { name: "Goldman Sachs Global Sustainable Equity", sleeve: "Akciová složka", isin: "LU0119216553" },
+          { name: "BNP Paribas Funds Euro Equity", sleeve: "Akciová složka", isin: "LU0823401574" },
           { name: "Allianz Global Artificial Intelligence (EUR)", sleeve: "Akciová složka", isin: "LU1548497699" },
-          { name: "Fidelity European Multi Asset Income Fund", sleeve: "Akciová složka", isin: "LU0261950553" },
-          { name: "Fidelity Fund Global Income", sleeve: "Úroková složka", isin: "LU0882574998" },
-          { name: "BNP Paribas Funds Euro Government Bond", sleeve: "Úroková složka", isin: "LU0111548326" },
-          { name: "BNP Paribas Funds Global Convertible", sleeve: "Úroková složka", isin: "LU0823394852" },
-          { name: "BNP Paribas Funds Euro Corporate Bond", sleeve: "Úroková složka", isin: "LU0131210360" },
-          { name: "Templeton Global Bond Fund", sleeve: "Úroková složka", isin: "LU0152980495" },
-          { name: "Franklin Euro Government Bond Fund", sleeve: "Úroková složka", isin: "LU0093669546" },
-          { name: "Fidelity Euro Bond Fund A-ACC-Euro", sleeve: "Úroková složka", isin: "LU0251130638" },
+          { name: "BNP Paribas Funds Disruptive Technology", sleeve: "Akciová složka", isin: "LU0823421689" },
+          { name: "ESPA STOCK BIOTEC (VT) EUR", sleeve: "Akciová složka", isin: "AT0000673165" },
+          { name: "BNP Paribas Funds US Growth", sleeve: "Akciová složka", isin: "LU0823434237" },
+          { name: "ERSTE Responsible Stock America VT", sleeve: "Akciová složka", isin: "AT0000A0A1P0" },
+          { name: "BNP Paribas Funds Aqua", sleeve: "Akciová složka", isin: "LU1165135440" },
+          { name: "ERSTE WWF STOCK ENVIRONMENT (VT) EUR", sleeve: "Akciová složka", isin: "AT0000A03N37" },
+          { name: "ESPA BOND DANUBIA (VT) EUR", sleeve: "Úroková složka", isin: "AT0000673199" },
+          { name: "Templeton Emerging Markets Bond Fund - A(acc)EUR-H1", sleeve: "Úroková složka", isin: "LU0768355603" },
+          { name: "BNP Paribas Funds Global High Yield Bond", sleeve: "Úroková složka", isin: "LU0823388615" },
+          { name: "ESPA BOND EUROPE-HIGH YIELD EUR", sleeve: "Úroková složka", isin: "AT0000673280" },
+          { name: "Franklin Euro High Yield Fund - A(acc)EUR", sleeve: "Úroková složka", isin: "LU0131126574" },
+          { name: "Goldman Sachs First Class Yield Opportunities", sleeve: "Úroková složka", isin: "LU0922501720" },
+          { name: "Goldman Sachs Global High Yield P hedged", sleeve: "Úroková složka", isin: "LU0546918664" },
+          { name: "Templeton Global High Yield Fund - A(acc)EUR", sleeve: "Úroková složka", isin: "LU0300743944" },
           { name: "BNP PARIBAS FLEXI I ABS Return Convertible", sleeve: "Úroková složka", isin: "LU2020654575" },
+          { name: "BNP Paribas Funds Global Convertible", sleeve: "Úroková složka", isin: "LU0823394852" },
           { name: "BNPP Flexi I Flexible Convertible Bond", sleeve: "Úroková složka", isin: "LU2020653924" },
-          { name: "ERSTE PORTFOLIO BOND EUROPE", sleeve: "Úroková složka", isin: "AT0000673215" },
-          { name: "ERSTE BOND EUROPE HIGH YIELD", sleeve: "Úroková složka", isin: "AT0000673280" },
+          { name: "BNP Paribas Funds Euro Corporate Bond", sleeve: "Úroková složka", isin: "LU0131210360" },
+          { name: "Fidelity Fund Global Income", sleeve: "Úroková složka", isin: "LU0882574998" },
+          { name: "Fidelity Funds - Euro Corporate Bond Fund A-ACC-Euro", sleeve: "Úroková složka", isin: "LU0370787193" },
+          { name: "Franklin European Corporate Bond Fund - A(acc)EUR", sleeve: "Úroková složka", isin: "LU0496369546" },
           { name: "GOLDMAN SACHS USD GREEN BOND", sleeve: "Úroková složka", isin: "LU2578936853" },
           { name: "Goldman Sachs Euro Fixed Income", sleeve: "Úroková složka", isin: "LU0546917773" },
-          { name: "Franklin European Corporate Bond Fund", sleeve: "Úroková složka", isin: "LU0496369546" },
+          { name: "Templeton Global Bond Fund", sleeve: "Úroková složka", isin: "LU0152980495" },
           { name: "BNP Paribas Funds Euro Money Market", sleeve: "Úroková složka", isin: "LU0083138064" },
           { name: "ERSTE RESERVE DOLLAR", sleeve: "Úroková složka", isin: "AT0000A0C8W9" },
+          { name: "BNP Paribas Funds Euro Government Bond", sleeve: "Úroková složka", isin: "LU0111548326" },
+          { name: "ESPA PORTFOLIO BOND EUROPE (VT) EUR", sleeve: "Úroková složka", isin: "AT0000673215" },
+          { name: "Fidelity Funds - Euro Bond Fund A-ACC-Euro", sleeve: "Úroková složka", isin: "LU0251130638" },
+          { name: "Franklin Euro Government Bond Fund A(Ydis)EUR", sleeve: "Úroková složka", isin: "LU0093669546" },
+          { name: "Goldman Sachs Euromix Bond", sleeve: "Úroková složka", isin: "LU0546916619" },
+          { name: "Templeton Global Bond Fund - A(acc) EUR-H1", sleeve: "Úroková složka", isin: "LU0294219869" },
           { name: "ESPA STOCK EUROPE-PROPERTY (VT) EUR", sleeve: "Alternativní složka", isin: "AT0000613617" },
-          { name: "Franklin Mutual European", sleeve: "Akciová složka", isin: "LU0768356080" },
+          { name: "Franklin Global Real Estate Fund - A(acc)EUR-H1", sleeve: "Alternativní složka", isin: "LU0523919115" },
+          { name: "Fidelity European Multi Asset Income Fund", sleeve: "Alternativní složka", isin: "LU0261950553" },
         ],
         USD: [
-          { name: "Allianz Artificial Intelligence", sleeve: "Akciová složka", isin: "LU1548497426" },
-          { name: "BNP Aqua", sleeve: "Akciová složka", isin: "LU1620156130" },
-          { name: "BNP US Growth", sleeve: "Akciová složka", isin: "LU0823434583" },
-          { name: "BNP Disruptive Technology", sleeve: "Akciová složka", isin: "LU0823421333" },
-          { name: "Erste Responsible Stock America", sleeve: "Akciová složka", isin: "AT0000673371" },
-          { name: "Goldman Sachs US Enhanced Equity", sleeve: "Akciová složka", isin: "LU0082087940" },
-          { name: "Franklin Technology", sleeve: "Akciová složka", isin: "LU0109392836" },
-          { name: "Franklin U.S. Opportunities", sleeve: "Akciová složka", isin: "LU0109391861" },
-          { name: "Fidelity Global Dividend", sleeve: "Akciová složka", isin: "LU0772969993" },
-          { name: "Fidelity Global Financial Services", sleeve: "Akciová složka", isin: "LU1711970159" },
+          { name: "Fidelity Funds - EMERGING MARKETS FUND A-ACC-USD", sleeve: "Akciová složka", isin: "LU0261950470" },
+          { name: "Templeton China Fund - A(acc)USD", sleeve: "Akciová složka", isin: "LU0052750758" },
+          { name: "Templeton Emerging Markets Fund - A(acc)USD", sleeve: "Akciová složka", isin: "LU0128522744" },
+          { name: "BNP Paribas Funds US Growth", sleeve: "Akciová složka", isin: "LU0823434583" },
+          { name: "ERSTE RESPONSIBLE STOCK AMERICA (VT) USD", sleeve: "Akciová složka", isin: "AT0000673371" },
+          { name: "Fidelity Funds - Global Dividend Fund A-ACC-USD", sleeve: "Akciová složka", isin: "LU0772969993" },
+          { name: "Franklin U.S. Opportunities Fund - A(acc)USD", sleeve: "Akciová složka", isin: "LU0109391861" },
+          { name: "Franklin World Perspectives Fund Class A (acc) USD", sleeve: "Akciová složka", isin: "LU0390134368" },
+          { name: "Franklin World Perspectives Fund Class A (acc) USD", sleeve: "Akciová složka", isin: "LU1458427785" },
           { name: "Fidelity Global Quality Income", sleeve: "Akciová složka", isin: "IE000YUTMIU2" },
-          { name: "Fidelity Global Bond", sleeve: "Úroková složka", isin: "LU0261946288" },
+          { name: "Goldman Sachs US Enhanced Equity", sleeve: "Akciová složka", isin: "LU0082087940" },
+          { name: "Allianz Artificial Intelligence", sleeve: "Akciová složka", isin: "LU1548497426" },
+          { name: "BNP Disruptive Technology", sleeve: "Akciová složka", isin: "LU0823421333" },
+          { name: "Fidelity Global Financial Services", sleeve: "Akciová složka", isin: "LU1711970159" },
+          { name: "Franklin Technology", sleeve: "Akciová složka", isin: "LU0109392836" },
+          { name: "Goldman Sachs Health Care", sleeve: "Akciová složka", isin: "LU0119209004" },
+          { name: "BNP Aqua", sleeve: "Akciová složka", isin: "LU1620156130" },
+          { name: "BNP Paribas Emerging Bond", sleeve: "Úroková složka", isin: "LU0089276934" },
+          { name: "FIDELITY FUNDS - EMERGING MARKET DEBT FUND A-ACC-USD", sleeve: "Úroková složka", isin: "LU0238205958" },
           { name: "Fidelity Funds - Emerging Market Corporate Debt Fund A-ACC-USD", sleeve: "Úroková složka", isin: "LU0900495697" },
+          { name: "Templeton Emerging Markets Bond Fund - A(acc)USD", sleeve: "Úroková složka", isin: "LU0478345209" },
           { name: "Fidelity Funds - Global High Yield Fund A-ACC-USD", sleeve: "Úroková složka", isin: "LU0740037022" },
-          { name: "SUSTAINABLE GLOBAL CORPORATE BOND", sleeve: "Úroková složka", isin: "LU0282388437" },
+          { name: "Fidelity Funds - US HIGH YIELD FUND A-ACC-USD", sleeve: "Úroková složka", isin: "LU0605520377" },
+          { name: "Franklin High Yield Fund - A(acc) USD", sleeve: "Úroková složka", isin: "LU0131126228" },
+          { name: "Templeton Global High Yield Fund - A(acc)USD", sleeve: "Úroková složka", isin: "LU0300740767" },
           { name: "BNPP Flexi I Flexible Convertible Bond", sleeve: "Úroková složka", isin: "LU2020653767" },
-          { name: "Franklin U.S. Government Fund USD", sleeve: "Úroková složka", isin: "LU0543330301" },
-          { name: "GOLDMAN SACHS USD GREEN BOND", sleeve: "Úroková složka", isin: "LU2578936853" },
-          { name: "Franklin U.S. Dollar Short-Term Money Market", sleeve: "Úroková složka", isin: "LU0128526901" },
+          { name: "BNP Paribas Funds Sustainable Global Corporate Bond", sleeve: "Úroková složka", isin: "LU0282388437" },
+          { name: "Fidelity Funds - US DOLLAR BOND FUND A-ACC-USD", sleeve: "Úroková složka", isin: "LU0261947682" },
+          { name: "Fidelity Global Bond", sleeve: "Úroková složka", isin: "LU0261946288" },
+          { name: "Goldman Sachs US Factor Credit", sleeve: "Úroková složka", isin: "LU0546914754" },
           { name: "BNP Paribas Funds USD Money Market", sleeve: "Úroková složka", isin: "LU0012186622" },
+          { name: "ERSTE RESERVE DOLLAR", sleeve: "Úroková složka", isin: "AT0000673249" },
+          { name: "Franklin U.S. Dollar Short-Term Money Market", sleeve: "Úroková složka", isin: "LU0128526901" },
           { name: "Měnový prémiový vklad v USD 06/2023", sleeve: "Úroková složka", isin: "UCER270624" },
+          { name: "BNP Paribas Funds US Short Duration Bond", sleeve: "Úroková složka", isin: "LU0012182399" },
+          { name: "Franklin U.S. Government Fund USD", sleeve: "Úroková složka", isin: "LU0543330301" },
+          { name: "Templeton Global Bond Fund - A(acc)USD", sleeve: "Úroková složka", isin: "LU0252652382" },
           { name: "BNP Paribas Flexi I Commodities", sleeve: "Alternativní složka", isin: "LU1931956285" },
         ],
       };
@@ -3866,7 +3905,7 @@
       const ALL_FUNDS_BY_CURRENCY = Object.fromEntries(
         Object.entries(FUND_CATALOG_BY_CURRENCY).map(([code, funds]) => [
           code,
-          funds.map(({ name, sleeve }) => ({ name, sleeve })),
+          funds.map(({ name, sleeve, isin }) => ({ name, sleeve, isin })),
         ])
       );
 
@@ -5461,123 +5500,159 @@
       /* ------------------------------------------------------------------ */
       /*  Fund categories for "Není investice jako investice"              */
       /* ------------------------------------------------------------------ */
-      const MAIN_CATEGORY_ORDER = ["Dluhopisové fondy", "Akciové fondy", "Alternativní fondy", "Sektorové fondy"];
+      const MAIN_CATEGORY_ORDER = ["Akciové", "Dluhopisové", "Komodity", "Nemovitosti a alternativy", "Smíšené"];
       const SUBCATEGORY_ORDER = {
-        "Dluhopisové fondy": [
-          "Státní dluhopisy",
-          "Státní a krátkodobé dluhopisy",
-          "Korporátní dluhopisy",
-          "High Yield dluhopisy a Emerging Markets",
-        ],
-        "Akciové fondy": ["Global", "Severní Amerika", "Evropa", "Asie"],
-        "Alternativní fondy": ["Komodity", "Nemovitosti a alternativy"],
-        "Sektorové fondy": ["Sektorové fondy"],
+        "Akciové": ["Asie", "Evropa", "Global", "Sektory", "Udržitelnost", "Severní Amerika", "Akcie rozvíjející se trhy", "Akcie rozvíjející se trhy CEE", "Akcie vyspělé trhy globální"],
+        "Dluhopisové": ["Konvertibilní dluhopisy", "Emerging markets dluhopisy", "High Yield dluhopisy", "Státní dluhopisy", "Korporátní dluhopisy", "Státní a krátkodobé dluhopisy", "Peněžní trh"],
+        "Komodity": ["Komodity"],
+        "Nemovitosti a alternativy": ["Reality"],
+        "Smíšené": ["Global", "Evropa"],
       };
       const FUND_CLASSIFICATION_BY_ISIN = {
-        CZ0008472271: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        CZ0008472263: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0082087437: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0768356593: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0111548326: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        LU0012186622: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0083138064: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0543330301: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        LU0128526901: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        UCER270624: { main: "Dluhopisové fondy", sub: "Státní a krátkodobé dluhopisy" },
-        LU0093669546: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        LU0251130638: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        AT0000673215: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        LU0294219869: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        LU0252652382: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        LU0546916619: { main: "Dluhopisové fondy", sub: "Státní dluhopisy" },
-        CZ0008472230: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU1022391483: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU1692483032: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0882574998: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0261946288: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0282388437: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0131210360: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0496369546: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0546917773: { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy" },
-        LU0131126574: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0131126228: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU1114574418: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0979393146: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        CZ0008472412: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        CZ0008472297: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        AT0000673280: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0900495697: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0740037022: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0922501720: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0546918664: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0300743944: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        LU0300740767: { main: "Dluhopisové fondy", sub: "High Yield dluhopisy a Emerging Markets" },
-        AT0000A1E119: { main: "Alternativní fondy", sub: "Komodity" },
-        LU1931956954: { main: "Alternativní fondy", sub: "Komodity" },
-        LU1931956285: { main: "Alternativní fondy", sub: "Komodity" },
-        CZ0008472545: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        CZ0008476280: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU0823394423: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU0823394852: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU0629872945: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU2020654062: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU2020654575: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU2020653924: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU2020653767: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU2155808657: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        AT0000613617: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        LU0523919115: { main: "Alternativní fondy", sub: "Nemovitosti a alternativy" },
-        CZ0008472404: { main: "Akciové fondy", sub: "Global" },
-        CZ0008475043: { main: "Akciové fondy", sub: "Global" },
-        AT0000A1AW14: { main: "Akciové fondy", sub: "Global" },
-        LU1400167216: { main: "Akciové fondy", sub: "Global" },
-        LU0979392924: { main: "Akciové fondy", sub: "Global" },
-        LU0605515377: { main: "Akciové fondy", sub: "Global" },
-        LU1542713687: { main: "Akciové fondy", sub: "Global" },
-        LU2484078758: { main: "Akciové fondy", sub: "Global" },
-        IE000YC7FPB6: { main: "Akciové fondy", sub: "Global" },
-        LU0405489047: { main: "Akciové fondy", sub: "Global" },
-        LU1165135440: { main: "Akciové fondy", sub: "Global" },
-        LU1548497426: { main: "Akciové fondy", sub: "Global" },
-        LU1620156130: { main: "Akciové fondy", sub: "Global" },
-        LU0823421333: { main: "Akciové fondy", sub: "Global" },
-        LU0109392836: { main: "Akciové fondy", sub: "Global" },
-        LU0109391861: { main: "Akciové fondy", sub: "Global" },
-        LU1711970159: { main: "Akciové fondy", sub: "Global" },
-        IE000YUTMIU2: { main: "Akciové fondy", sub: "Global" },
-        AT0000639463: { main: "Akciové fondy", sub: "Severní Amerika" },
-        LU0979392767: { main: "Akciové fondy", sub: "Severní Amerika" },
-        LU0405488825: { main: "Akciové fondy", sub: "Severní Amerika" },
-        LU0823434310: { main: "Akciové fondy", sub: "Severní Amerika" },
-        LU0823434237: { main: "Akciové fondy", sub: "Severní Amerika" },
-        LU0823434583: { main: "Akciové fondy", sub: "Severní Amerika" },
-        AT0000A0A1P0: { main: "Akciové fondy", sub: "Severní Amerika" },
-        CZ0008472289: { main: "Akciové fondy", sub: "Evropa" },
-        AT0000A2QP89: { main: "Akciové fondy", sub: "Evropa" },
-        LU0082087353: { main: "Akciové fondy", sub: "Evropa" },
-        LU0823401228: { main: "Akciové fondy", sub: "Evropa" },
-        LU0823401574: { main: "Akciové fondy", sub: "Evropa" },
-        LU2451817873: { main: "Akciové fondy", sub: "Evropa" },
-        LU0768356080: { main: "Akciové fondy", sub: "Evropa" },
-        LU1213835512: { main: "Akciové fondy", sub: "Asie" },
-        LU3215558704: { main: "Akciové fondy", sub: "Asie" },
-        LU0768356247: { main: "Akciové fondy", sub: "Asie" },
-        LU0429745879: { main: "Akciové fondy", sub: "Asie" },
-        AT0000A10QN3: { main: "Akciové fondy", sub: "Asie" },
-        AT0000A00GK1: { main: "Akciové fondy", sub: "Asie" },
-        AT0000A0XYP0: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        AT0000A3N017: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU1789409619: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU2033393641: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU1641601064: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU1548497699: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU2898087106: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        AT0000A044X2: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU0429746091: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU1458425730: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU0295015134: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        LU2739071228: { main: "Sektorové fondy", sub: "Sektorové fondy" },
-        AT0000673165: { main: "Sektorové fondy", sub: "Sektorové fondy" },
+        AT0000494893: { main: "Akciové", sub: "Akcie rozvíjející se trhy CEE" },
+        AT0000613617: { main: "Nemovitosti a alternativy", sub: "Reality" },
+        AT0000639463: { main: "Akciové", sub: "Severní Amerika" },
+        AT0000673165: { main: "Akciové", sub: "Sektory" },
+        AT0000673181: { main: "Akciové", sub: "Akcie rozvíjející se trhy CEE" },
+        AT0000673199: { main: "Dluhopisové", sub: "Emerging markets dluhopisy" },
+        AT0000673215: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        AT0000673249: { main: "Dluhopisové", sub: "Peněžní trh" },
+        AT0000673280: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        AT0000673314: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        AT0000673371: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        AT0000A00GK1: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        AT0000A03N37: { main: "Akciové", sub: "Udržitelnost" },
+        AT0000A044X2: { main: "Akciové", sub: "Udržitelnost" },
+        AT0000A0A1P0: { main: "Akciové", sub: "Severní Amerika" },
+        AT0000A0C8W9: { main: "Dluhopisové", sub: "Peněžní trh" },
+        AT0000A0XYP0: { main: "Akciové", sub: "Sektory" },
+        AT0000A10QN3: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        AT0000A1AW14: { main: "Akciové", sub: "Global" },
+        AT0000A1E119: { main: "Komodity", sub: "Komodity" },
+        AT0000A2QP89: { main: "Akciové", sub: "Evropa" },
+        AT0000A3N017: { main: "Akciové", sub: "Sektory" },
+        CZ0008472230: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        CZ0008472263: { main: "Dluhopisové", sub: "Státní a krátkodobé dluhopisy" },
+        CZ0008472271: { main: "Dluhopisové", sub: "Státní a krátkodobé dluhopisy" },
+        CZ0008472289: { main: "Akciové", sub: "Evropa" },
+        CZ0008472297: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        CZ0008472404: { main: "Akciové", sub: "Global" },
+        CZ0008472412: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        CZ0008472545: { main: "Nemovitosti a alternativy", sub: "Reality" },
+        CZ0008475043: { main: "Akciové", sub: "Global" },
+        CZ0008476280: { main: "Nemovitosti a alternativy", sub: "Reality" },
+        IE000YC7FPB6: { main: "Akciové", sub: "Global" },
+        IE000YUTMIU2: { main: "Akciové", sub: "Global" },
+        LU0012182399: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0012186622: { main: "Dluhopisové", sub: "Peněžní trh" },
+        LU0052750758: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        LU0078277505: { main: "Akciové", sub: "Akcie rozvíjející se trhy CEE" },
+        LU0082087353: { main: "Akciové", sub: "Evropa" },
+        LU0082087437: { main: "Dluhopisové", sub: "Státní a krátkodobé dluhopisy" },
+        LU0082087940: { main: "Akciové", sub: "Global" },
+        LU0083138064: { main: "Dluhopisové", sub: "Peněžní trh" },
+        LU0089276934: { main: "Dluhopisové", sub: "Emerging markets dluhopisy" },
+        LU0093669546: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0109391861: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0109392836: { main: "Akciové", sub: "Sektory" },
+        LU0111491469: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0111548326: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0113311731: { main: "Akciové", sub: "Akcie rozvíjející se trhy CEE" },
+        LU0119209004: { main: "Akciové", sub: "Sektory" },
+        LU0119216553: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0122612848: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0128522744: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        LU0128526901: { main: "Dluhopisové", sub: "Peněžní trh" },
+        LU0131126228: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0131126574: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0131210360: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0140363002: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0146257711: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0152980495: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0238205958: { main: "Dluhopisové", sub: "Emerging markets dluhopisy" },
+        LU0251130638: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0252652382: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0261946288: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0261947682: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0261950470: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        LU0261950553: { main: "Smíšené", sub: "Evropa" },
+        LU0282388437: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0294219869: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0295015134: { main: "Akciové", sub: "Udržitelnost" },
+        LU0300740767: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0300743944: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0370787193: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0390134368: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0405488825: { main: "Akciové", sub: "Severní Amerika" },
+        LU0405489047: { main: "Smíšené", sub: "Global" },
+        LU0429745879: { main: "Akciové", sub: "Asie" },
+        LU0429746091: { main: "Akciové", sub: "Udržitelnost" },
+        LU0478345209: { main: "Dluhopisové", sub: "Emerging markets dluhopisy" },
+        LU0496369546: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0523919115: { main: "Nemovitosti a alternativy", sub: "Reality" },
+        LU0543330301: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0546914754: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0546916619: { main: "Dluhopisové", sub: "Státní dluhopisy" },
+        LU0546917773: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0546918664: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0605515377: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0605520377: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0626262082: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        LU0629872945: { main: "Komodity", sub: "Komodity" },
+        LU0740037022: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0768355603: { main: "Dluhopisové", sub: "Emerging markets dluhopisy" },
+        LU0768356080: { main: "Akciové", sub: "Evropa" },
+        LU0768356247: { main: "Akciové", sub: "Asie" },
+        LU0768356593: { main: "Dluhopisové", sub: "Státní a krátkodobé dluhopisy" },
+        LU0772969993: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0823388615: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0823394423: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU0823394852: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU0823401228: { main: "Akciové", sub: "Evropa" },
+        LU0823401574: { main: "Akciové", sub: "Evropa" },
+        LU0823417810: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0823421333: { main: "Akciové", sub: "Sektory" },
+        LU0823421689: { main: "Akciové", sub: "Sektory" },
+        LU0823434237: { main: "Akciové", sub: "Severní Amerika" },
+        LU0823434310: { main: "Akciové", sub: "Severní Amerika" },
+        LU0823434583: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU0882574998: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU0900495697: { main: "Dluhopisové", sub: "Emerging markets dluhopisy" },
+        LU0922501720: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU0979392767: { main: "Akciové", sub: "Severní Amerika" },
+        LU0979392924: { main: "Akciové", sub: "Global" },
+        LU0979393146: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU1022391483: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU1097728288: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
+        LU1114574418: { main: "Dluhopisové", sub: "High Yield dluhopisy" },
+        LU1165135440: { main: "Akciové", sub: "Udržitelnost" },
+        LU1213835512: { main: "Akciové", sub: "Asie" },
+        LU1400167216: { main: "Akciové", sub: "Global" },
+        LU1458425730: { main: "Akciové", sub: "Udržitelnost" },
+        LU1458427785: { main: "Akciové", sub: "Akcie vyspělé trhy globální" },
+        LU1542713687: { main: "Akciové", sub: "Global" },
+        LU1548497426: { main: "Akciové", sub: "Sektory" },
+        LU1548497699: { main: "Akciové", sub: "Sektory" },
+        LU1620156130: { main: "Akciové", sub: "Udržitelnost" },
+        LU1641601064: { main: "Akciové", sub: "Sektory" },
+        LU1692483032: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU1711970159: { main: "Akciové", sub: "Sektory" },
+        LU1789409619: { main: "Akciové", sub: "Sektory" },
+        LU1931956285: { main: "Komodity", sub: "Komodity" },
+        LU1931956954: { main: "Komodity", sub: "Komodity" },
+        LU2020653767: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU2020653924: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU2020654062: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU2020654575: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU2033393641: { main: "Akciové", sub: "Udržitelnost" },
+        LU2155808657: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
+        LU2451817873: { main: "Akciové", sub: "Evropa" },
+        LU2484078758: { main: "Akciové", sub: "Sektory" },
+        LU2578936853: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
+        LU2739071228: { main: "Akciové", sub: "Sektory" },
+        LU2898087106: { main: "Akciové", sub: "Sektory" },
+        LU3215558704: { main: "Akciové", sub: "Asie" },
+        UCER270624: { main: "Dluhopisové", sub: "Peněžní trh" },
       };
       function getFundCategoryInfo(fundName, currency, isin, sleeve) {
         const byIsin = isin ? FUND_CLASSIFICATION_BY_ISIN[String(isin).trim()] : null;
@@ -5585,12 +5660,12 @@
           return { ...byIsin, categoryLabel: `${byIsin.main} · ${byIsin.sub}` };
         }
         if (sleeve === "Úroková složka") {
-          return { main: "Dluhopisové fondy", sub: "Korporátní dluhopisy", categoryLabel: "Dluhopisové fondy · Korporátní dluhopisy" };
+          return { main: "Dluhopisové", sub: "Korporátní dluhopisy", categoryLabel: "Dluhopisové · Korporátní dluhopisy" };
         }
         if (sleeve === "Alternativní složka") {
-          return { main: "Alternativní fondy", sub: "Nemovitosti a alternativy", categoryLabel: "Alternativní fondy · Nemovitosti a alternativy" };
+          return { main: "Nemovitosti a alternativy", sub: "Reality", categoryLabel: "Nemovitosti a alternativy · Reality" };
         }
-        return { main: "Akciové fondy", sub: "Global", categoryLabel: "Akciové fondy · Global" };
+        return { main: "Akciové", sub: "Global", categoryLabel: "Akciové · Global" };
       }
 
       const NENI_FUND_COLORS = [
@@ -5598,10 +5673,11 @@
         "#be123c","#0a1e3f","#84cc16","#d97706","#4f46e5","#0d9488",
       ];
       const NENI_CATEGORY_COLORS = {
-        "Dluhopisové fondy": "#1e5fb8",
-        "Akciové fondy": "#16a34a",
-        "Alternativní fondy": "#d97706",
-        "Sektorové fondy": "#7c3aed",
+        "Dluhopisové": "#1e5fb8",
+        "Akciové": "#16a34a",
+        "Nemovitosti a alternativy": "#d97706",
+        "Komodity": "#7c3aed",
+        "Smíšené": "#0d9488",
       };
 
       /* ------------------------------------------------------------------ */
@@ -5713,12 +5789,14 @@
 
         // Build flat list of all funds available in Zpětná modelace for the selected currency.
         const allFunds = useMemo(() => {
-          return activeCatalogFunds.map(({ name, sleeve }) => {
+          return activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
             const perf = perfData[name] || {};
-            const isin = isinFor(name);
+            const isin = fundIsin || isinFor(name);
             const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
             return {
+              id: `${name}::${isin || currency}`,
               name,
+              currency,
               sleeve,
               isin,
               category: categoryInfo.categoryLabel,
@@ -5778,19 +5856,19 @@
           return list;
         }, [allFunds, category, subCategory, sleeveFilter, search]);
 
-        const toggleFund = (name) => {
+        const toggleFund = (fundId) => {
           setSelectedFunds((prev) =>
-            prev.includes(name)
-              ? prev.filter((n) => n !== name)
+            prev.includes(fundId)
+              ? prev.filter((id) => id !== fundId)
               : prev.length >= 8
-              ? [...prev.slice(1), name]
-              : [...prev, name]
+              ? [...prev.slice(1), fundId]
+              : [...prev, fundId]
           );
         };
 
         // For comparison chart: selected funds
         const compFunds = useMemo(
-          () => allFunds.filter((f) => selectedFunds.includes(f.name)),
+          () => allFunds.filter((f) => selectedFunds.includes(f.id)),
           [allFunds, selectedFunds]
         );
 
@@ -5811,7 +5889,7 @@
           compFunds.forEach((f) => {
             const returns = getFundReturnSeries(f.name, currency);
             if (returns) {
-              realSeries[f.name] = computeVariableRateSeries(
+              realSeries[f.id] = computeVariableRateSeries(
                 initialInvestment,
                 monthlyContribution,
                 returns
@@ -5827,11 +5905,11 @@
             const monthsSinceStart = point.monthsSinceStart;
             compFunds.forEach((f) => {
               // Use real NAV-based weekly growth when available
-              if (realSeries[f.name]) {
-                const value = realSeries[f.name][index] ?? null;
+              if (realSeries[f.id]) {
+                const value = realSeries[f.id][index] ?? null;
                 const investedBase = initialInvestment + monthlyContribution * monthsSinceStart;
-                row[f.name] = value !== null ? +value.toFixed(2) : null;
-                row[`${f.name}Pct`] =
+                row[f.id] = value !== null ? +value.toFixed(2) : null;
+                row[`${f.id}Pct`] =
                   value !== null && investedBase > 0
                     ? +(((value / investedBase) - 1) * 100).toFixed(2)
                     : null;
@@ -5839,8 +5917,8 @@
               }
               const annualRate = f.p5y ?? f.p3y ?? f.p1y;
               if (annualRate === null || annualRate === undefined) {
-                row[f.name] = null;
-                row[`${f.name}Pct`] = null;
+                row[f.id] = null;
+                row[`${f.id}Pct`] = null;
                 return;
               }
               const monthlyRate = Math.pow(1 + annualRate / 100, 1 / 12) - 1;
@@ -5851,15 +5929,15 @@
                   : initialInvestment * Math.pow(1 + monthlyRate, monthCount) +
                     monthlyContribution * ((Math.pow(1 + monthlyRate, monthCount) - 1) / monthlyRate);
               const investedBase = initialInvestment + monthlyContribution * monthCount;
-              row[f.name] = +value.toFixed(2);
-              row[`${f.name}Pct`] =
+              row[f.id] = +value.toFixed(2);
+              row[`${f.id}Pct`] =
                 investedBase > 0 ? +(((value / investedBase) - 1) * 100).toFixed(2) : null;
             });
             return row;
           });
         }, [compFunds, initialInvestment, monthlyContribution]);
         const neniDataKeys = useMemo(
-          () => compFunds.map((f) => (viewMode === "percent" ? `${f.name}Pct` : f.name)),
+          () => compFunds.map((f) => (viewMode === "percent" ? `${f.id}Pct` : f.id)),
           [compFunds, viewMode]
         );
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
@@ -6128,12 +6206,16 @@
                     {selectedFunds.length > 0 && (
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Vybrané pro srovnání:</span>
-                        {selectedFunds.map((name) => (
-                          <span key={name} className="inline-flex items-center gap-1.5 rounded-full border border-ep-blue/30 bg-ep-blue/5 px-2.5 py-1 text-[11px] font-semibold text-ep-blue">
-                            {name}
-                            <button type="button" onClick={() => toggleFund(name)} className="text-ep-blue/60 hover:text-ep-blue" aria-label={`Odebrat ${name}`}>×</button>
-                          </span>
-                        ))}
+                        {selectedFunds.map((fundId) => {
+                          const selectedFund = allFunds.find((f) => f.id === fundId);
+                          const label = selectedFund?.name || fundId;
+                          return (
+                            <span key={fundId} className="inline-flex items-center gap-1.5 rounded-full border border-ep-blue/30 bg-ep-blue/5 px-2.5 py-1 text-[11px] font-semibold text-ep-blue">
+                              {label}
+                              <button type="button" onClick={() => toggleFund(fundId)} className="text-ep-blue/60 hover:text-ep-blue" aria-label={`Odebrat ${label}`}>×</button>
+                            </span>
+                          );
+                        })}
                         <button type="button" onClick={() => setSelectedFunds([])} className="text-[11px] text-slate-500 hover:text-rose-600 underline">Zrušit výběr</button>
                       </div>
                     )}
@@ -6154,13 +6236,13 @@
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {filtered.map((fund) => {
-                          const selected = selectedFunds.includes(fund.name);
-                          const colorIdx = selectedFunds.indexOf(fund.name);
+                          const selected = selectedFunds.includes(fund.id);
+                          const colorIdx = selectedFunds.indexOf(fund.id);
                           const dotColor = colorIdx >= 0 ? NENI_FUND_COLORS[colorIdx % NENI_FUND_COLORS.length] : NENI_CATEGORY_COLORS[fund.mainCategory] || "#1e5fb8";
                           return (
                             <tr
-                              key={fund.name}
-                              onClick={() => toggleFund(fund.name)}
+                              key={fund.id}
+                              onClick={() => toggleFund(fund.id)}
                               className={"cursor-pointer transition-colors " + (selected ? "bg-ep-blue/5 hover:bg-ep-blue/8" : "hover:bg-slate-50")}
                             >
                               <td className="px-3 py-2.5 text-center">
@@ -6178,7 +6260,7 @@
                                   {selected && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />}
                                   <div className="min-w-0">
                                     <div className={"text-xs font-semibold " + (selected ? "text-ep-navy" : "text-slate-700")}>{fund.name}</div>
-                                    <div className="mt-0.5 text-[10px] text-slate-500">{[fund.sleeve, fund.isin ? `ISIN ${fund.isin}` : "ISIN doplníme"].filter(Boolean).join(" · ")}</div>
+                                    <div className="mt-0.5 text-[10px] text-slate-500">{[fund.currency, fund.sleeve, fund.isin ? `ISIN ${fund.isin}` : "ISIN doplníme"].filter(Boolean).join(" · ")}</div>
                                   </div>
                                 </div>
                               </td>
@@ -6234,10 +6316,10 @@
 
                     <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       {compFunds.map((f, idx) => {
-                        const valueKey = viewMode === "percent" ? `${f.name}Pct` : f.name;
+                        const valueKey = viewMode === "percent" ? `${f.id}Pct` : f.id;
                         const finalValue = finalRow ? finalRow[valueKey] : null;
                         return (
-                          <div key={f.name} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <div key={f.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
                               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
                               <span className="truncate">{f.name}</span>
@@ -6260,9 +6342,9 @@
                     <div className="mb-4 flex flex-wrap gap-2">
                       {compFunds.map((f, idx) => (
                         <button
-                          key={f.name}
+                          key={f.id}
                           type="button"
-                          onClick={() => toggleFund(f.name)}
+                          onClick={() => toggleFund(f.id)}
                           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                           aria-label={`Odebrat ${f.name} z porovnání`}
                           title="Odebrat fond z porovnání"
@@ -6365,9 +6447,9 @@
                           <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
                           {compFunds.map((f, idx) => (
                             <Area
-                              key={f.name}
+                              key={f.id}
                               type="linear"
-                              dataKey={viewMode === "percent" ? `${f.name}Pct` : f.name}
+                              dataKey={viewMode === "percent" ? `${f.id}Pct` : f.id}
                               name={f.name}
                               stroke={NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length]}
                               strokeWidth={2.8}
@@ -6397,7 +6479,7 @@
                           {compFunds.map((f, idx) => {
                             const cum5 = f.p5y !== null ? (Math.pow(1 + f.p5y / 100, 5) - 1) * 100 : null;
                             return (
-                              <tr key={f.name}>
+                              <tr key={f.id}>
                                 <td className="flex items-center gap-2 px-3 py-2">
                                   <span className="h-2.5 w-2.5 rounded-full shrink-0 self-start mt-1" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
                                   <div>
