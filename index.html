@@ -3352,6 +3352,130 @@
         const pad = range * 0.08;
         return [min - pad, max + pad];
       }
+      function roundChartNumber(value, decimals = 2) {
+        return Number.isFinite(value) ? +Number(value).toFixed(decimals) : value;
+      }
+      function buildStartAnchoredDisplayData(dataRows, dataKeys, options = {}) {
+        const rows = Array.isArray(dataRows) ? dataRows : [];
+        if (!rows.length || !Array.isArray(dataKeys) || !dataKeys.length) return rows;
+        const {
+          mode = "value",
+          referenceValue = 0,
+          extraValueKeys = [],
+          anchorOverrides = {},
+        } = options;
+        const firstRow = rows[0];
+        const valueScales = {};
+        const percentOffsets = {};
+        const scaledKeys = [...new Set((mode === "value" ? [...dataKeys, ...extraValueKeys] : dataKeys).filter(Boolean))];
+        scaledKeys.forEach((key) => {
+          const firstValue = Number(firstRow?.[key]);
+          if (mode === "value") {
+            valueScales[key] = Number.isFinite(firstValue) && Math.abs(firstValue) > 1e-9 ? referenceValue / firstValue : 1;
+          } else {
+            percentOffsets[key] = Number.isFinite(firstValue) ? firstValue : 0;
+          }
+        });
+        return rows.map((row, index) => {
+          const nextRow = { ...row };
+          if (index === 0) {
+            nextRow.isStartAnchor = true;
+            dataKeys.forEach((key) => {
+              nextRow[key] = mode === "percent" ? 0 : referenceValue;
+            });
+            Object.entries(anchorOverrides).forEach(([key, value]) => {
+              nextRow[key] = value;
+            });
+            return nextRow;
+          }
+          scaledKeys.forEach((key) => {
+            const currentValue = Number(row?.[key]);
+            if (!Number.isFinite(currentValue)) return;
+            nextRow[key] =
+              mode === "percent"
+                ? roundChartNumber(currentValue - percentOffsets[key])
+                : roundChartNumber(currentValue * valueScales[key]);
+          });
+          return nextRow;
+        });
+      }
+      function buildChartTicks(domain, anchorValue, tickCount = 5) {
+        if (!Array.isArray(domain) || domain.length !== 2) return undefined;
+        const [minDomain, maxDomain] = domain;
+        if (!Number.isFinite(minDomain) || !Number.isFinite(maxDomain)) return undefined;
+        if (Math.abs(maxDomain - minDomain) < 1e-9) return Number.isFinite(anchorValue) ? [anchorValue] : [minDomain];
+        const roughStep = Math.abs(maxDomain - minDomain) / Math.max(1, tickCount - 1);
+        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(roughStep, 1e-9))));
+        const normalizedStep = roughStep / magnitude;
+        const niceStep =
+          normalizedStep <= 1 ? 1 :
+          normalizedStep <= 2 ? 2 :
+          normalizedStep <= 2.5 ? 2.5 :
+          normalizedStep <= 5 ? 5 : 10;
+        const step = niceStep * magnitude;
+        const start = Math.floor(minDomain / step) * step;
+        const end = Math.ceil(maxDomain / step) * step;
+        const rawTicks = [];
+        for (let value = start; value <= end + step * 0.25 && rawTicks.length < 12; value += step) {
+          rawTicks.push(roundChartNumber(value, step >= 1 ? 2 : 4));
+        }
+        if (Number.isFinite(anchorValue)) rawTicks.push(anchorValue);
+        const sorted = rawTicks.sort((a, b) => a - b);
+        const tolerance = Math.max(Math.abs(step) * 0.02, 0.01);
+        const ticks = [];
+        sorted.forEach((value) => {
+          if (!ticks.length) {
+            ticks.push(value);
+            return;
+          }
+          const lastValue = ticks[ticks.length - 1];
+          if (Math.abs(value - lastValue) <= tolerance) {
+            const currentIsAnchor = Number.isFinite(anchorValue) && Math.abs(value - anchorValue) <= tolerance;
+            const lastIsAnchor = Number.isFinite(anchorValue) && Math.abs(lastValue - anchorValue) <= tolerance;
+            if (currentIsAnchor && !lastIsAnchor) ticks[ticks.length - 1] = anchorValue;
+            return;
+          }
+          ticks.push(value);
+        });
+        if (Number.isFinite(anchorValue) && !ticks.some((value) => Math.abs(value - anchorValue) <= tolerance)) {
+          ticks.push(anchorValue);
+          ticks.sort((a, b) => a - b);
+        }
+        return ticks;
+      }
+      function normalizeSearchText(value) {
+        return String(value || "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, " ");
+      }
+      function normalizeCompactSearchText(value) {
+        return normalizeSearchText(value).replace(/\s+/g, "");
+      }
+      function matchesFundSearch(fund, rawQuery, extraFields = []) {
+        const query = normalizeSearchText(rawQuery);
+        if (!query) return true;
+        const compactQuery = normalizeCompactSearchText(rawQuery);
+        const aliasValues = Array.isArray(fund?.aliases)
+          ? fund.aliases
+          : Array.isArray(fund?.searchAliases)
+          ? fund.searchAliases
+          : [];
+        const textFields = [
+          fund?.name,
+          fund?.category,
+          fund?.sleeve,
+          ...aliasValues,
+          ...extraFields,
+        ]
+          .filter(Boolean)
+          .map(normalizeSearchText);
+        if (textFields.some((value) => value.includes(query))) return true;
+        return [fund?.isin, ...extraFields]
+          .filter(Boolean)
+          .map(normalizeCompactSearchText)
+          .some((value) => compactQuery && value.includes(compactQuery));
+      }
       function stddev(values) {
         if (values.length <= 1) return 0;
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -4146,6 +4270,18 @@
             return { ...row, ...extra };
           });
         }, [rawData, viewMode, compareStrategyIds, allComparisonSeriesMap]);
+        const portfolioKey = viewMode === "percent" ? "portfolioPct" : "portfolio";
+        const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
+        const activeDataKeys = useMemo(() => {
+          const keys = [portfolioKey, inflationKey];
+          if (showSleeves && canSplitSleeves) {
+            activeSleeveSeries.forEach((series) => keys.push(series.dataKey));
+          } else {
+            activeComparisonStrategies.forEach((strategy) => keys.push(`comparison_${strategy.id}`));
+          }
+          return keys;
+        }, [portfolioKey, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
+        const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
         const displayData = useMemo(() => {
           let filtered;
           if (horizonMonths === "custom") {
@@ -4161,59 +4297,17 @@
           } else {
             filtered = data;
           }
-          // Rebase: ensure every series starts exactly at initialInvestment (value mode only).
-          // Use independent per-series scale factors so inflation, sleeves, and comparison
-          // lines all start at initialInvestment, not just the portfolio line.
-          if (filtered.length > 0 && viewMode !== "percent") {
-            const firstRow = filtered[0];
-            const portfolioScale = firstRow.portfolio > 0 ? initialInvestment / firstRow.portfolio : 1;
-            const inflationScale = firstRow.inflation > 0 ? initialInvestment / firstRow.inflation : portfolioScale;
-            const contributedScale = firstRow.contributed > 0 ? initialInvestment / firstRow.contributed : portfolioScale;
-            const needsRebase = Math.abs(firstRow.portfolio - initialInvestment) > 0.01
-              || Math.abs(firstRow.inflation - initialInvestment) > 0.01;
-            if (needsRebase) {
-              // Per-comparison independent scale factors
-              const compScales = {};
-              COMPARISON_STRATEGIES.forEach((strategy) => {
-                const key = "comparison_" + strategy.id;
-                const firstVal = firstRow[key];
-                compScales[key] = (firstVal && firstVal > 0) ? initialInvestment / firstVal : 1;
-              });
-              return filtered.map((row, i) => {
-                if (i === 0) {
-                  // Start anchor: every active series set explicitly to initialInvestment
-                  const anchor = { ...row, isStartAnchor: true };
-                  anchor.portfolio = initialInvestment;
-                  anchor.inflation = initialInvestment;
-                  anchor.contributed = initialInvestment;
-                  COMPARISON_STRATEGIES.forEach((strategy) => {
-                    const key = "comparison_" + strategy.id;
-                    if (anchor[key] !== undefined) anchor[key] = initialInvestment;
-                  });
-                  SLEEVE_SERIES.forEach(({ key }) => {
-                    if (anchor[key] !== undefined) anchor[key] = anchor[key] * portfolioScale;
-                  });
-                  return anchor;
-                }
-                const rebased = {
-                  ...row,
-                  portfolio: row.portfolio * portfolioScale,
-                  inflation: row.inflation * inflationScale,
-                  contributed: row.contributed * contributedScale,
-                };
-                COMPARISON_STRATEGIES.forEach((strategy) => {
-                  const key = "comparison_" + strategy.id;
-                  if (row[key] !== undefined) rebased[key] = row[key] * compScales[key];
-                });
-                SLEEVE_SERIES.forEach(({ key }) => {
-                  if (row[key] !== undefined) rebased[key] = row[key] * portfolioScale;
-                });
-                return rebased;
-              });
-            }
-          }
-          return filtered;
-        }, [data, horizonMonths, customDateFrom, customDateTo, viewMode, initialInvestment]);
+          return buildStartAnchoredDisplayData(filtered, activeDataKeys, {
+            mode: viewMode,
+            referenceValue,
+            extraValueKeys: viewMode === "value" ? ["contributed"] : [],
+            anchorOverrides: {
+              contributed: initialInvestment,
+              recurringContributed: 0,
+              referenceValue,
+            },
+          });
+        }, [data, horizonMonths, customDateFrom, customDateTo, activeDataKeys, viewMode, initialInvestment, referenceValue]);
         // Show one tick per quarter (approximately every 63 trading days)
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -4225,17 +4319,6 @@
             return true;
           }).map((d) => d.date);
         }, [displayData]);
-        const portfolioKey = viewMode === "percent" ? "portfolioPct" : "portfolio";
-        const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
-        const activeDataKeys = useMemo(() => {
-          const keys = [portfolioKey, inflationKey];
-          if (showSleeves && canSplitSleeves) {
-            activeSleeveSeries.forEach((series) => keys.push(series.dataKey));
-          } else {
-            activeComparisonStrategies.forEach((strategy) => keys.push(`comparison_${strategy.id}`));
-          }
-          return keys;
-        }, [portfolioKey, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
         const yDomain = useMemo(
           () =>
             computeChartDomain(
@@ -4243,10 +4326,12 @@
               activeDataKeys,
               viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
               viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
-              viewMode === "percent" ? null : initialInvestment
+              referenceValue
             ),
-          [displayData, activeDataKeys, viewMode, initialInvestment]
+          [displayData, activeDataKeys, viewMode, initialInvestment, referenceValue]
         );
+        const yTicks = useMemo(() => buildChartTicks(yDomain, referenceValue), [yDomain, referenceValue]);
+        const referenceLabel = viewMode === "percent" ? "Start: 0 %" : `Počáteční investice: ${formatMoney(initialInvestment)}`;
         const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
         const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
@@ -4428,10 +4513,10 @@
                   </defs>
                   <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
                   <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
-                  <YAxis domain={yDomain} tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
+                  <YAxis domain={yDomain} ticks={yTicks} tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
-                  <ReferenceLine y={viewMode === "percent" ? 0 : initialInvestment} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
+                  <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} label={{ value: referenceLabel, position: "insideTopLeft", fill: "#475569", fontSize: 12 }} />
                   {showSleeves && canSplitSleeves
                     ? activeSleeveSeries.map((series) => (
                         <Area
@@ -4706,12 +4791,11 @@
           setFilterSleeve("Všechny složky");
         };
 
-        const normalizedQuery = searchQuery.trim().toLowerCase();
         const activeFunds = ALL_FUNDS_BY_CURRENCY[currency] || [];
         const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
         const availableFunds = activeFunds.filter((fund) => {
           const matchesSleeve = filterSleeve === "Všechny složky" ? true : fund.sleeve === filterSleeve;
-          const matchesQuery = normalizedQuery ? fund.name.toLowerCase().includes(normalizedQuery) : true;
+          const matchesQuery = matchesFundSearch({ ...fund, isin: activeIsins[fund.name] || "" }, searchQuery);
           const notAlreadyUsed = !existingFundNames.has(fund.name.trim().toLowerCase());
           return matchesSleeve && matchesQuery && notAlreadyUsed;
         });
@@ -4751,7 +4835,7 @@
             {showSearch && (
               <div className="mb-4 rounded-2xl border border-ep-blue/20 bg-slate-50 p-3 fade-in">
                 <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center">
-                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hledat fond..." className="min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Hledat fond" />
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hledat fond nebo ISIN..." className="min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Hledat fond nebo ISIN" />
                   <select value={filterSleeve} onChange={(e) => setFilterSleeve(e.target.value)} className="min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Filtrovat složku fondu">
                     <option>Všechny složky</option>
                     {sleeveOrder.map((option) => (<option key={option} value={option}>{option}</option>))}
@@ -5023,12 +5107,11 @@
         }), [detailAllocation]);
 
         const existingFundNames = new Set(funds.map((fund) => fund.name.trim().toLowerCase()));
-        const normalizedQuery = searchQuery.trim().toLowerCase();
         const activeFunds = ALL_FUNDS_BY_CURRENCY[currency] || [];
         const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
         const availableFunds = activeFunds.filter((fund) => {
           const matchesSleeve = filterSleeve === "Všechny složky" ? true : fund.sleeve === filterSleeve;
-          const matchesQuery = normalizedQuery ? fund.name.toLowerCase().includes(normalizedQuery) : true;
+          const matchesQuery = matchesFundSearch({ ...fund, isin: activeIsins[fund.name] || "" }, searchQuery);
           const notAlreadyUsed = !existingFundNames.has(fund.name.trim().toLowerCase());
           return matchesSleeve && matchesQuery && notAlreadyUsed;
         });
@@ -5152,7 +5235,7 @@
             {showSearch && (
               <section className="rounded-2xl border border-ep-blue/20 bg-white p-4 shadow-premium fade-in">
                 <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center">
-                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hledat fond do vlastního portfolia..." className="min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Hledat fond" />
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hledat fond nebo ISIN do vlastního portfolia..." className="min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Hledat fond nebo ISIN" />
                   <select value={filterSleeve} onChange={(e) => setFilterSleeve(e.target.value)} className="min-w-0 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Filtrovat složku fondu">
                     <option>Všechny složky</option>
                     {sleeveOrder.map((option) => (<option key={option} value={option}>{option}</option>))}
@@ -5680,14 +5763,7 @@
           if (category !== "Vše") list = list.filter((f) => f.mainCategory === category);
           if (subCategory !== "Všechny podtřídy") list = list.filter((f) => f.subCategory === subCategory);
           if (sleeveFilter !== "Všechny složky") list = list.filter((f) => f.sleeve === sleeveFilter);
-          if (search.trim()) {
-            const q = search.trim().toLowerCase();
-            list = list.filter((f) =>
-              f.name.toLowerCase().includes(q) ||
-              (f.sleeve || "").toLowerCase().includes(q) ||
-              (f.category || "").toLowerCase().includes(q)
-            );
-          }
+          if (search.trim()) list = list.filter((f) => matchesFundSearch(f, search, [f.isin]));
           list = [...list].sort((a, b) => {
             const mainRankA = MAIN_CATEGORY_ORDER.indexOf(a.mainCategory);
             const mainRankB = MAIN_CATEGORY_ORDER.indexOf(b.mainCategory);
@@ -5783,6 +5859,11 @@
             return row;
           });
         }, [compFunds, initialInvestment, monthlyContribution]);
+        const neniDataKeys = useMemo(
+          () => compFunds.map((f) => (viewMode === "percent" ? `${f.name}Pct` : f.name)),
+          [compFunds, viewMode]
+        );
+        const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
 
         const displayData = useMemo(() => {
           let filtered;
@@ -5805,40 +5886,14 @@
           } else {
             filtered = growthData;
           }
-          // Rebase: ensure each fund's first visible data point = initialInvestment (value mode only).
-          // Use per-fund scale factors and an explicit start anchor at the first filtered point.
-          if (filtered.length > 0 && viewMode !== "percent" && compFunds.length > 0) {
-            const fundScales = {};
-            let needsRebase = false;
-            compFunds.forEach((f) => {
-              const firstVal = filtered[0][f.name];
-              if (firstVal && firstVal > 0 && Math.abs(firstVal - initialInvestment) > 0.01) {
-                fundScales[f.name] = initialInvestment / firstVal;
-                needsRebase = true;
-              } else {
-                fundScales[f.name] = 1;
-              }
-            });
-            if (needsRebase) {
-              return filtered.map((row, i) => {
-                if (i === 0) {
-                  // Start anchor: every fund explicitly set to initialInvestment
-                  const anchor = { ...row, isStartAnchor: true };
-                  compFunds.forEach((f) => { anchor[f.name] = initialInvestment; });
-                  return anchor;
-                }
-                const rebased = { ...row };
-                compFunds.forEach((f) => {
-                  if (row[f.name] !== null && row[f.name] !== undefined) {
-                    rebased[f.name] = +(row[f.name] * fundScales[f.name]).toFixed(2);
-                  }
-                });
-                return rebased;
-              });
-            }
-          }
-          return filtered;
-        }, [growthData, horizonMonths, customDateFrom, customDateTo, viewMode, initialInvestment, compFunds]);
+          return buildStartAnchoredDisplayData(filtered, neniDataKeys, {
+            mode: viewMode,
+            referenceValue,
+            anchorOverrides: {
+              referenceValue,
+            },
+          });
+        }, [growthData, horizonMonths, customDateFrom, customDateTo, neniDataKeys, viewMode, referenceValue]);
 
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -5853,10 +5908,6 @@
         );
         const finalRow = displayData.length ? displayData[displayData.length - 1] : null;
         const chartLabelValue = viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota";
-        const neniDataKeys = useMemo(
-          () => compFunds.map((f) => (viewMode === "percent" ? `${f.name}Pct` : f.name)),
-          [compFunds, viewMode]
-        );
         const neniYDomain = useMemo(
           () =>
             computeChartDomain(
@@ -5864,10 +5915,12 @@
               neniDataKeys,
               viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
               viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
-              viewMode === "percent" ? null : initialInvestment
+              referenceValue
             ),
-          [displayData, neniDataKeys, viewMode, initialInvestment]
+          [displayData, neniDataKeys, viewMode, initialInvestment, referenceValue]
         );
+        const neniYTicks = useMemo(() => buildChartTicks(neniYDomain, referenceValue), [neniYDomain, referenceValue]);
+        const referenceLabel = viewMode === "percent" ? "Start: 0 %" : `Počáteční investice: ${formatMoney(initialInvestment)}`;
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "Poslední rok" },
           { label: "3R", months: 36, title: "Poslední 3 roky" },
@@ -6042,9 +6095,9 @@
                           type="text"
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Hledat fond…"
+                          placeholder="Hledat fond nebo ISIN…"
                           className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20 lg:flex-1"
-                          aria-label="Hledat fond"
+                          aria-label="Hledat fond nebo ISIN"
                         />
                         <select
                           value={sleeveFilter}
@@ -6285,6 +6338,7 @@
                           <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
                           <YAxis
                             domain={neniYDomain}
+                            ticks={neniYTicks}
                             tickFormatter={(v) =>
                               viewMode === "percent"
                                 ? `${Number(v).toFixed(0)} %`
@@ -6310,7 +6364,7 @@
                             contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
                           />
                           <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
-                          <ReferenceLine y={viewMode === "percent" ? 0 : initialInvestment} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
+                          <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} label={{ value: referenceLabel, position: "insideTopLeft", fill: "#475569", fontSize: 12 }} />
                           {compFunds.map((f, idx) => (
                             <Area
                               key={f.name}
