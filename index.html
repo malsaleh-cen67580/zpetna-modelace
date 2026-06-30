@@ -4331,7 +4331,6 @@
           [displayData, activeDataKeys, viewMode, initialInvestment, referenceValue]
         );
         const yTicks = useMemo(() => buildChartTicks(yDomain, referenceValue), [yDomain, referenceValue]);
-        const referenceLabel = viewMode === "percent" ? "Start: 0 %" : `Počáteční investice: ${formatMoney(initialInvestment)}`;
         const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
         const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
@@ -4516,7 +4515,7 @@
                   <YAxis domain={yDomain} ticks={yTicks} tickFormatter={(v) => viewMode === "percent" ? `${Number(v).toFixed(0)} %` : formatMoney(v, { compact: true }).replace(/\s/g, "")} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
-                  <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} label={{ value: referenceLabel, position: "insideTopLeft", fill: "#475569", fontSize: 12 }} />
+                  <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
                   {showSleeves && canSplitSleeves
                     ? activeSleeveSeries.map((series) => (
                         <Area
@@ -5920,7 +5919,6 @@
           [displayData, neniDataKeys, viewMode, initialInvestment, referenceValue]
         );
         const neniYTicks = useMemo(() => buildChartTicks(neniYDomain, referenceValue), [neniYDomain, referenceValue]);
-        const referenceLabel = viewMode === "percent" ? "Start: 0 %" : `Počáteční investice: ${formatMoney(initialInvestment)}`;
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "Poslední rok" },
           { label: "3R", months: 36, title: "Poslední 3 roky" },
@@ -6364,7 +6362,7 @@
                             contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
                           />
                           <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
-                          <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} label={{ value: referenceLabel, position: "insideTopLeft", fill: "#475569", fontSize: 12 }} />
+                          <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
                           {compFunds.map((f, idx) => (
                             <Area
                               key={f.name}
