@@ -3349,40 +3349,42 @@
         });
         return values;
       }
-      function getAxisTickCount(minValue, maxValue, tickStep) {
-        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || !Number.isFinite(tickStep) || tickStep <= 0) {
-          return 0;
-        }
-        const axisMin = Math.floor(minValue / tickStep) * tickStep;
-        const axisMax = Math.ceil(maxValue / tickStep) * tickStep;
-        return Math.round((axisMax - axisMin) / tickStep) + 1;
+      function getNiceTickStep(rawStep) {
+        if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
+        const exponent = Math.floor(Math.log10(rawStep));
+        const base = Math.pow(10, exponent);
+        const normalized = rawStep / base;
+        if (normalized <= 1) return base;
+        if (normalized <= 2) return 2 * base;
+        if (normalized <= 2.5) return 2.5 * base;
+        if (normalized <= 5) return 5 * base;
+        return 10 * base;
       }
-      function chooseAxisStep(minValue, maxValue, candidates) {
-        const validCandidates = (candidates || []).filter((step) => Number.isFinite(step) && step > 0);
-        if (!validCandidates.length) return Math.max(Math.abs(maxValue - minValue) || 1, 1);
-        let smallestReadableStep = null;
-        for (const step of validCandidates) {
-          const tickCount = getAxisTickCount(minValue, maxValue, step);
-          if (tickCount >= 5 && tickCount <= 8) return step;
-          if (smallestReadableStep === null && tickCount <= 8) smallestReadableStep = step;
-        }
-        if (smallestReadableStep !== null) return smallestReadableStep;
-        let step = validCandidates[validCandidates.length - 1];
-        while (getAxisTickCount(minValue, maxValue, step) > 8) step *= 2;
-        return step;
-      }
-      function buildTicksFromStep(axisMin, axisMax, tickStep) {
-        if (!Number.isFinite(axisMin) || !Number.isFinite(axisMax) || !Number.isFinite(tickStep) || tickStep <= 0) {
-          return undefined;
-        }
+      function buildTicksFromDomain(axisMin, axisMax, preferredTickCount = 7) {
+        if (!Number.isFinite(axisMin) || !Number.isFinite(axisMax) || axisMax < axisMin) return { ticks: undefined, tickStep: 1 };
+        const safeRange = Math.max(axisMax - axisMin, Math.max(Math.abs(axisMin), Math.abs(axisMax), 1) * 0.05, 1e-6);
+        const tickStep = getNiceTickStep(safeRange / Math.max(preferredTickCount - 1, 1));
         const ticks = [];
-        const maxTicks = 12;
+        const start = Math.ceil(axisMin / tickStep) * tickStep;
+        const maxTicks = 16;
         for (let index = 0; index < maxTicks; index += 1) {
-          const value = axisMin + tickStep * index;
+          const value = start + tickStep * index;
           if (value > axisMax + tickStep * 0.25) break;
           ticks.push(roundChartNumber(value, tickStep >= 1 ? 2 : 4));
         }
-        return ticks;
+        if (!ticks.length || Math.abs(ticks[0] - axisMin) > 1e-6) ticks.unshift(roundChartNumber(axisMin, tickStep >= 1 ? 2 : 4));
+        if (Math.abs(ticks[ticks.length - 1] - axisMax) > 1e-6) ticks.push(roundChartNumber(axisMax, tickStep >= 1 ? 2 : 4));
+        return { ticks, tickStep };
+      }
+      function buildVisibleAxisLabels(ticks, mode = "value") {
+        if (!Array.isArray(ticks) || !ticks.length) return [];
+        const stride = ticks.length <= 6 ? 1 : 2;
+        const visible = ticks.filter((tick, index) => index === 0 || index === ticks.length - 1 || index % stride === 0);
+        if (mode === "percent") {
+          const zeroTick = ticks.find((tick) => Math.abs(tick) < 1e-6);
+          if (Number.isFinite(zeroTick) && !visible.some((tick) => Math.abs(tick - zeroTick) < 1e-6)) visible.push(zeroTick);
+        }
+        return [...new Set(visible.map((tick) => roundChartNumber(tick, 4)))].sort((a, b) => a - b);
       }
       function computeChartAxis(dataRows, dataKeys, options = {}) {
         const {
@@ -3394,38 +3396,46 @@
         } = options;
         const values = collectChartValues(dataRows, dataKeys, anchorValues);
         if (!values.length) {
+          const fallbackTick = buildTicksFromDomain(fallbackMin, fallbackMax, 5);
           return {
             domain: [fallbackMin, fallbackMax],
-            ticks: buildTicksFromStep(fallbackMin, fallbackMax, Math.max((fallbackMax - fallbackMin) / 4, 1)),
-            tickStep: Math.max((fallbackMax - fallbackMin) / 4, 1),
+            ticks: fallbackTick.ticks,
+            tickStep: fallbackTick.tickStep,
+            visibleLabelTicks: buildVisibleAxisLabels(fallbackTick.ticks, mode),
             minGraphValue: fallbackMin,
             maxGraphValue: fallbackMax,
           };
         }
         const minGraphValue = Math.min(...values);
         const maxGraphValue = Math.max(...values);
-        const isValueMode = mode === "value" && Number.isFinite(investedAmount) && investedAmount > 0;
-        const baseStep = isValueMode ? investedAmount * 0.1 : null;
-        const tickStep = isValueMode
-          ? chooseAxisStep(minGraphValue, maxGraphValue, [1, 2, 5, 10, 20, 50, 100].map((multiplier) => baseStep * multiplier))
-          : chooseAxisStep(minGraphValue, maxGraphValue, [1, 2, 5, 10, 20, 25, 50]);
-        if (Math.abs(maxGraphValue - minGraphValue) < 1e-9) {
-          const singleAxisMin = roundChartNumber(minGraphValue - tickStep, tickStep >= 1 ? 2 : 4);
-          const singleAxisMax = roundChartNumber(maxGraphValue + tickStep, tickStep >= 1 ? 2 : 4);
-          return {
-            domain: [singleAxisMin, singleAxisMax],
-            ticks: buildTicksFromStep(singleAxisMin, singleAxisMax, tickStep),
-            tickStep,
-            minGraphValue,
-            maxGraphValue,
-          };
+        const rawRange = maxGraphValue - minGraphValue;
+        const safeRange = Math.max(rawRange, Math.max(Math.abs(minGraphValue), Math.abs(maxGraphValue), 1) * 0.02, 1e-6);
+        const isPercentMode = mode === "percent";
+        const paddingRatio = isPercentMode ? 0.04 : 0.03;
+        const padding = Math.max(safeRange * paddingRatio, isPercentMode ? 0.15 : Math.max(1, safeRange * 0.005));
+        let axisMin = minGraphValue - padding;
+        let axisMax = maxGraphValue + padding;
+        const includeZeroPercent = isPercentMode && minGraphValue <= 0 && maxGraphValue >= 0;
+        if (includeZeroPercent) {
+          axisMin = Math.min(axisMin, 0);
+          axisMax = Math.max(axisMax, 0);
         }
-        const axisMin = roundChartNumber(Math.floor(minGraphValue / tickStep) * tickStep, tickStep >= 1 ? 2 : 4);
-        const axisMax = roundChartNumber(Math.ceil(maxGraphValue / tickStep) * tickStep, tickStep >= 1 ? 2 : 4);
+        if (!isPercentMode && minGraphValue >= 0 && axisMin < 0) {
+          const nearZeroThreshold = Number.isFinite(investedAmount) && investedAmount > 0 ? investedAmount * 0.02 : safeRange * 0.15;
+          if (Math.abs(axisMin) <= nearZeroThreshold) axisMin = 0;
+        }
+        if (Math.abs(axisMax - axisMin) < 1e-9) {
+          axisMin -= safeRange * 0.5;
+          axisMax += safeRange * 0.5;
+        }
+        const roundedAxisMin = roundChartNumber(axisMin, safeRange >= 1 ? 2 : 4);
+        const roundedAxisMax = roundChartNumber(axisMax, safeRange >= 1 ? 2 : 4);
+        const tickData = buildTicksFromDomain(roundedAxisMin, roundedAxisMax, isPercentMode ? 7 : 6);
         return {
-          domain: [axisMin, axisMax],
-          ticks: buildTicksFromStep(axisMin, axisMax, tickStep),
-          tickStep,
+          domain: [roundedAxisMin, roundedAxisMax],
+          ticks: tickData.ticks,
+          tickStep: tickData.tickStep,
+          visibleLabelTicks: buildVisibleAxisLabels(tickData.ticks, mode),
           minGraphValue,
           maxGraphValue,
         };
@@ -3441,6 +3451,13 @@
           .replace(/(\.\d*?[1-9])0+$/, "$1")
           .replace(".", ",");
       }
+      function formatScaledAxisNumberEn(value, scale, decimals) {
+        const scaledValue = Number(value) / scale;
+        const fixedValue = scaledValue.toFixed(Math.max(0, decimals));
+        return fixedValue
+          .replace(/\.0+$/, "")
+          .replace(/(\.\d*?[1-9])0+$/, "$1");
+      }
       function getAxisLabelDecimals(stepInUnit) {
         if (!Number.isFinite(stepInUnit) || stepInUnit <= 0) return 0;
         if (stepInUnit >= 1) return 0;
@@ -3450,7 +3467,11 @@
       }
       // Formats a Y-axis tick value for display. Returns a compact, precise string
       // that distinguishes between nearby values (e.g. 1,5 mil. Kč vs 2 mil. Kč).
-      function formatAxisValue(value, currency, viewMode, tickStep = null) {
+      function formatAxisValue(value, currency, viewMode, tickStep = null, visibleLabelTicks = null) {
+        if (Array.isArray(visibleLabelTicks) && visibleLabelTicks.length) {
+          const isVisible = visibleLabelTicks.some((tick) => Math.abs(Number(tick) - Number(value)) < 1e-6);
+          if (!isVisible) return "";
+        }
         if (viewMode === "percent") {
           const step = Number.isFinite(tickStep) && tickStep > 0 ? tickStep : 5;
           return `${formatScaledAxisNumber(value, 1, getAxisLabelDecimals(step))} %`;
@@ -3483,13 +3504,13 @@
         if (currency === "USD") {
           if (abs >= 1000000) {
             const stepInMillions = (Number.isFinite(tickStep) ? tickStep : 100000) / 1000000;
-            return `${formatScaledAxisNumber(v, 1000000, getAxisLabelDecimals(stepInMillions))} mil. $`;
+            return `${formatScaledAxisNumberEn(v, 1000000, getAxisLabelDecimals(stepInMillions))}M $`;
           }
           if (abs >= 1000) {
             const stepInThousands = (Number.isFinite(tickStep) ? tickStep : 1000) / 1000;
-            return `${formatScaledAxisNumber(v, 1000, getAxisLabelDecimals(stepInThousands))} tis. $`;
+            return `${formatScaledAxisNumberEn(v, 1000, getAxisLabelDecimals(stepInThousands))}K $`;
           }
-          return `${formatScaledAxisNumber(v, 1, getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1))} $`;
+          return `${formatScaledAxisNumberEn(v, 1, getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1))} $`;
         }
         // Fallback for unknown currency
         return new Intl.NumberFormat("cs-CZ", { style: "currency", currency, maximumFractionDigits: getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1) }).format(v);
@@ -4645,7 +4666,7 @@
                   </defs>
                   <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
                   <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
-                  <YAxis domain={yAxis.domain} ticks={yAxis.ticks} tickFormatter={(v) => formatAxisValue(v, currency, viewMode, yAxis.tickStep)} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={84} />
+                  <YAxis domain={yAxis.domain} ticks={yAxis.ticks} tickFormatter={(v) => formatAxisValue(v, currency, viewMode, yAxis.tickStep, yAxis.visibleLabelTicks)} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={84} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
                   <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
@@ -6522,7 +6543,7 @@
                           <YAxis
                             domain={neniYAxis.domain}
                             ticks={neniYAxis.ticks}
-                            tickFormatter={(v) => formatAxisValue(v, currency, viewMode, neniYAxis.tickStep)}
+                            tickFormatter={(v) => formatAxisValue(v, currency, viewMode, neniYAxis.tickStep, neniYAxis.visibleLabelTicks)}
                             tick={{ fontSize: 11, fill: "#64748b" }}
                             tickLine={false}
                             axisLine={{ stroke: "rgba(148,163,184,0.3)" }}
