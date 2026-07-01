@@ -3332,91 +3332,167 @@
         const years = months / 12;
         return (Math.pow(end / start, 1 / years) - 1) * 100;
       }
-      function computeChartDomain(dataRows, dataKeys, fallbackMin = 0, fallbackMax = 100, anchorValue = null, investedAmount = null) {
+      function collectChartValues(dataRows, dataKeys, extraValues = []) {
         const values = [];
         (dataRows || []).forEach((row) => {
           (dataKeys || []).forEach((key) => {
             const raw = row?.[key];
-            // Skip null, undefined and empty strings — do NOT treat them as zero
             if (raw === null || raw === undefined || raw === "") return;
-            const val = Number(raw);
-            if (Number.isFinite(val)) values.push(val);
+            const value = Number(raw);
+            if (Number.isFinite(value)) values.push(value);
           });
         });
-        if (anchorValue !== null && Number.isFinite(anchorValue)) values.push(anchorValue);
-        if (!values.length) return [fallbackMin, fallbackMax];
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        if (min === max) {
-          const pad = Math.max(Math.abs(min) * 0.05, 1);
-          return [min - pad, max + pad];
+        (extraValues || []).forEach((raw) => {
+          if (raw === null || raw === undefined || raw === "") return;
+          const value = Number(raw);
+          if (Number.isFinite(value)) values.push(value);
+        });
+        return values;
+      }
+      function getAxisTickCount(minValue, maxValue, tickStep) {
+        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || !Number.isFinite(tickStep) || tickStep <= 0) {
+          return 0;
         }
-        // When investedAmount is provided (value mode), align the domain to a tick
-        // step that is a multiple of 10 % of the invested amount so that the chart
-        // shows meaningful fluctuations without an artificially wide range.
-        if (Number.isFinite(investedAmount) && investedAmount > 0) {
-          const baseStep = investedAmount * 0.1;
-          const MULTIPLIERS = [1, 2, 5, 10, 20, 50, 100];
-          let tickStep = baseStep;
-          for (const m of MULTIPLIERS) {
-            tickStep = baseStep * m;
-            if (Math.ceil((max - min) / tickStep) <= 8) break;
-          }
-          const axisMin = Math.floor(min / tickStep) * tickStep;
-          const axisMax = Math.ceil(max / tickStep) * tickStep;
-          return [axisMin, axisMax];
+        const axisMin = Math.floor(minValue / tickStep) * tickStep;
+        const axisMax = Math.ceil(maxValue / tickStep) * tickStep;
+        return Math.round((axisMax - axisMin) / tickStep) + 1;
+      }
+      function chooseAxisStep(minValue, maxValue, candidates) {
+        const validCandidates = (candidates || []).filter((step) => Number.isFinite(step) && step > 0);
+        if (!validCandidates.length) return Math.max(Math.abs(maxValue - minValue) || 1, 1);
+        let smallestReadableStep = null;
+        for (const step of validCandidates) {
+          const tickCount = getAxisTickCount(minValue, maxValue, step);
+          if (tickCount >= 5 && tickCount <= 8) return step;
+          if (smallestReadableStep === null && tickCount <= 8) smallestReadableStep = step;
         }
-        const range = max - min;
-        const pad = range * 0.08;
-        return [min - pad, max + pad];
+        if (smallestReadableStep !== null) return smallestReadableStep;
+        let step = validCandidates[validCandidates.length - 1];
+        while (getAxisTickCount(minValue, maxValue, step) > 8) step *= 2;
+        return step;
+      }
+      function buildTicksFromStep(axisMin, axisMax, tickStep) {
+        if (!Number.isFinite(axisMin) || !Number.isFinite(axisMax) || !Number.isFinite(tickStep) || tickStep <= 0) {
+          return undefined;
+        }
+        const ticks = [];
+        const maxTicks = 12;
+        for (let index = 0; index < maxTicks; index += 1) {
+          const value = axisMin + tickStep * index;
+          if (value > axisMax + tickStep * 0.25) break;
+          ticks.push(roundChartNumber(value, tickStep >= 1 ? 2 : 4));
+        }
+        return ticks;
+      }
+      function computeChartAxis(dataRows, dataKeys, options = {}) {
+        const {
+          fallbackMin = 0,
+          fallbackMax = 100,
+          anchorValues = [],
+          investedAmount = null,
+          mode = "value",
+        } = options;
+        const values = collectChartValues(dataRows, dataKeys, anchorValues);
+        if (!values.length) {
+          return {
+            domain: [fallbackMin, fallbackMax],
+            ticks: buildTicksFromStep(fallbackMin, fallbackMax, Math.max((fallbackMax - fallbackMin) / 4, 1)),
+            tickStep: Math.max((fallbackMax - fallbackMin) / 4, 1),
+            minGraphValue: fallbackMin,
+            maxGraphValue: fallbackMax,
+          };
+        }
+        const minGraphValue = Math.min(...values);
+        const maxGraphValue = Math.max(...values);
+        const isValueMode = mode === "value" && Number.isFinite(investedAmount) && investedAmount > 0;
+        const baseStep = isValueMode ? investedAmount * 0.1 : null;
+        const tickStep = isValueMode
+          ? chooseAxisStep(minGraphValue, maxGraphValue, [1, 2, 5, 10, 20, 50, 100].map((multiplier) => baseStep * multiplier))
+          : chooseAxisStep(minGraphValue, maxGraphValue, [1, 2, 5, 10, 20, 25, 50]);
+        if (Math.abs(maxGraphValue - minGraphValue) < 1e-9) {
+          const singleAxisMin = roundChartNumber(minGraphValue - tickStep, tickStep >= 1 ? 2 : 4);
+          const singleAxisMax = roundChartNumber(maxGraphValue + tickStep, tickStep >= 1 ? 2 : 4);
+          return {
+            domain: [singleAxisMin, singleAxisMax],
+            ticks: buildTicksFromStep(singleAxisMin, singleAxisMax, tickStep),
+            tickStep,
+            minGraphValue,
+            maxGraphValue,
+          };
+        }
+        const axisMin = roundChartNumber(Math.floor(minGraphValue / tickStep) * tickStep, tickStep >= 1 ? 2 : 4);
+        const axisMax = roundChartNumber(Math.ceil(maxGraphValue / tickStep) * tickStep, tickStep >= 1 ? 2 : 4);
+        return {
+          domain: [axisMin, axisMax],
+          ticks: buildTicksFromStep(axisMin, axisMax, tickStep),
+          tickStep,
+          minGraphValue,
+          maxGraphValue,
+        };
       }
       function roundChartNumber(value, decimals = 2) {
         return Number.isFinite(value) ? +Number(value).toFixed(decimals) : value;
       }
+      function formatScaledAxisNumber(value, scale, decimals) {
+        const scaledValue = Number(value) / scale;
+        const fixedValue = scaledValue.toFixed(Math.max(0, decimals));
+        return fixedValue
+          .replace(/\.0+$/, "")
+          .replace(/(\.\d*?[1-9])0+$/, "$1")
+          .replace(".", ",");
+      }
+      function getAxisLabelDecimals(stepInUnit) {
+        if (!Number.isFinite(stepInUnit) || stepInUnit <= 0) return 0;
+        if (stepInUnit >= 1) return 0;
+        if (stepInUnit >= 0.1) return 1;
+        if (stepInUnit >= 0.01) return 2;
+        return 3;
+      }
       // Formats a Y-axis tick value for display. Returns a compact, precise string
       // that distinguishes between nearby values (e.g. 1,5 mil. Kč vs 2 mil. Kč).
-      function formatAxisValue(value, currency, viewMode) {
+      function formatAxisValue(value, currency, viewMode, tickStep = null) {
         if (viewMode === "percent") {
-          return `${Number(value).toFixed(0)} %`;
+          const step = Number.isFinite(tickStep) && tickStep > 0 ? tickStep : 5;
+          return `${formatScaledAxisNumber(value, 1, getAxisLabelDecimals(step))} %`;
         }
         const v = Number(value);
         if (!Number.isFinite(v)) return "";
         const abs = Math.abs(v);
         if (currency === "CZK") {
           if (abs >= 1000000) {
-            const mils = v / 1000000;
-            const isExactMil = Math.abs(mils - Math.round(mils)) < 0.05;
-            return `${isExactMil ? Math.round(mils) : mils.toFixed(1).replace(".", ",")} mil. Kč`;
+            const stepInMillions = (Number.isFinite(tickStep) ? tickStep : 100000) / 1000000;
+            return `${formatScaledAxisNumber(v, 1000000, getAxisLabelDecimals(stepInMillions))} mil. Kč`;
           }
           if (abs >= 1000) {
-            return `${Math.round(v / 1000)} tis. Kč`;
+            const stepInThousands = (Number.isFinite(tickStep) ? tickStep : 1000) / 1000;
+            return `${formatScaledAxisNumber(v, 1000, getAxisLabelDecimals(stepInThousands))} tis. Kč`;
           }
-          return `${Math.round(v)} Kč`;
+          return `${formatScaledAxisNumber(v, 1, getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1))} Kč`;
         }
         if (currency === "EUR") {
           if (abs >= 1000000) {
-            const mils = v / 1000000;
-            const isExactMil = Math.abs(mils - Math.round(mils)) < 0.05;
-            return `${isExactMil ? Math.round(mils) : mils.toFixed(1).replace(".", ",")} mil. €`;
+            const stepInMillions = (Number.isFinite(tickStep) ? tickStep : 100000) / 1000000;
+            return `${formatScaledAxisNumber(v, 1000000, getAxisLabelDecimals(stepInMillions))} mil. €`;
           }
           if (abs >= 1000) {
-            return `${Math.round(v / 1000)} tis. €`;
+            const stepInThousands = (Number.isFinite(tickStep) ? tickStep : 1000) / 1000;
+            return `${formatScaledAxisNumber(v, 1000, getAxisLabelDecimals(stepInThousands))} tis. €`;
           }
-          return `${Math.round(v)} €`;
+          return `${formatScaledAxisNumber(v, 1, getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1))} €`;
         }
         if (currency === "USD") {
           if (abs >= 1000000) {
-            const mils = v / 1000000;
-            const isExactMil = Math.abs(mils - Math.round(mils)) < 0.05;
-            return `${isExactMil ? Math.round(mils) : mils.toFixed(1)}M $`;
+            const stepInMillions = (Number.isFinite(tickStep) ? tickStep : 100000) / 1000000;
+            return `${formatScaledAxisNumber(v, 1000000, getAxisLabelDecimals(stepInMillions))} mil. $`;
           }
           if (abs >= 1000) {
-            return `${Math.round(v / 1000)}K $`;
+            const stepInThousands = (Number.isFinite(tickStep) ? tickStep : 1000) / 1000;
+            return `${formatScaledAxisNumber(v, 1000, getAxisLabelDecimals(stepInThousands))} tis. $`;
           }
-          return `${Math.round(v)} $`;
+          return `${formatScaledAxisNumber(v, 1, getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1))} $`;
         }
         // Fallback for unknown currency
-        return new Intl.NumberFormat("cs-CZ", { style: "currency", currency, maximumFractionDigits: 0, notation: "compact" }).format(v);
+        return new Intl.NumberFormat("cs-CZ", { style: "currency", currency, maximumFractionDigits: getAxisLabelDecimals(Number.isFinite(tickStep) ? tickStep : 1) }).format(v);
       }
       function buildStartAnchoredDisplayData(dataRows, dataKeys, options = {}) {
         const rows = Array.isArray(dataRows) ? dataRows : [];
@@ -3461,50 +3537,6 @@
           });
           return nextRow;
         });
-      }
-      function buildChartTicks(domain, anchorValue, tickCount = 5) {
-        if (!Array.isArray(domain) || domain.length !== 2) return undefined;
-        const [minDomain, maxDomain] = domain;
-        if (!Number.isFinite(minDomain) || !Number.isFinite(maxDomain)) return undefined;
-        if (Math.abs(maxDomain - minDomain) < 1e-9) return Number.isFinite(anchorValue) ? [anchorValue] : [minDomain];
-        const roughStep = Math.abs(maxDomain - minDomain) / Math.max(1, tickCount - 1);
-        const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(roughStep, 1e-9))));
-        const normalizedStep = roughStep / magnitude;
-        const niceStep =
-          normalizedStep <= 1 ? 1 :
-          normalizedStep <= 2 ? 2 :
-          normalizedStep <= 2.5 ? 2.5 :
-          normalizedStep <= 5 ? 5 : 10;
-        const step = niceStep * magnitude;
-        const start = Math.floor(minDomain / step) * step;
-        const end = Math.ceil(maxDomain / step) * step;
-        const rawTicks = [];
-        for (let value = start; value <= end + step * 0.25 && rawTicks.length < 12; value += step) {
-          rawTicks.push(roundChartNumber(value, step >= 1 ? 2 : 4));
-        }
-        if (Number.isFinite(anchorValue)) rawTicks.push(anchorValue);
-        const sorted = rawTicks.sort((a, b) => a - b);
-        const tolerance = Math.max(Math.abs(step) * 0.02, 0.01);
-        const ticks = [];
-        sorted.forEach((value) => {
-          if (!ticks.length) {
-            ticks.push(value);
-            return;
-          }
-          const lastValue = ticks[ticks.length - 1];
-          if (Math.abs(value - lastValue) <= tolerance) {
-            const currentIsAnchor = Number.isFinite(anchorValue) && Math.abs(value - anchorValue) <= tolerance;
-            const lastIsAnchor = Number.isFinite(anchorValue) && Math.abs(lastValue - anchorValue) <= tolerance;
-            if (currentIsAnchor && !lastIsAnchor) ticks[ticks.length - 1] = anchorValue;
-            return;
-          }
-          ticks.push(value);
-        });
-        if (Number.isFinite(anchorValue) && !ticks.some((value) => Math.abs(value - anchorValue) <= tolerance)) {
-          ticks.push(anchorValue);
-          ticks.sort((a, b) => a - b);
-        }
-        return ticks;
       }
       function normalizeSearchText(value) {
         return String(value || "")
@@ -4421,19 +4453,17 @@
             return true;
           }).map((d) => d.date);
         }, [displayData]);
-        const yDomain = useMemo(
+        const yAxis = useMemo(
           () =>
-            computeChartDomain(
-              displayData,
-              activeDataKeys,
-              viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
-              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
-              referenceValue,
-              viewMode === "value" ? initialInvestment : null
-            ),
+            computeChartAxis(displayData, activeDataKeys, {
+              fallbackMin: viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
+              fallbackMax: viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
+              anchorValues: [referenceValue],
+              investedAmount: viewMode === "value" ? initialInvestment : null,
+              mode: viewMode,
+            }),
           [displayData, activeDataKeys, viewMode, initialInvestment, referenceValue]
         );
-        const yTicks = useMemo(() => buildChartTicks(yDomain, referenceValue), [yDomain, referenceValue]);
         const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
         const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
@@ -4615,7 +4645,7 @@
                   </defs>
                   <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
                   <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
-                  <YAxis domain={yDomain} ticks={yTicks} tickFormatter={(v) => formatAxisValue(v, currency, viewMode)} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={70} />
+                  <YAxis domain={yAxis.domain} ticks={yAxis.ticks} tickFormatter={(v) => formatAxisValue(v, currency, viewMode, yAxis.tickStep)} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} width={84} />
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
                   <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
@@ -6059,19 +6089,17 @@
         );
         const finalRow = displayData.length ? displayData[displayData.length - 1] : null;
         const chartLabelValue = viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota";
-        const neniYDomain = useMemo(
+        const neniYAxis = useMemo(
           () =>
-            computeChartDomain(
-              displayData,
-              neniDataKeys,
-              viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
-              viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
-              referenceValue,
-              viewMode === "value" ? initialInvestment : null
-            ),
+            computeChartAxis(displayData, neniDataKeys, {
+              fallbackMin: viewMode === "percent" ? -5 : Math.max(0, initialInvestment * 0.95),
+              fallbackMax: viewMode === "percent" ? 5 : Math.max(1, initialInvestment * 1.05),
+              anchorValues: [referenceValue],
+              investedAmount: viewMode === "value" ? initialInvestment : null,
+              mode: viewMode,
+            }),
           [displayData, neniDataKeys, viewMode, initialInvestment, referenceValue]
         );
-        const neniYTicks = useMemo(() => buildChartTicks(neniYDomain, referenceValue), [neniYDomain, referenceValue]);
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "Poslední rok" },
           { label: "3R", months: 36, title: "Poslední 3 roky" },
@@ -6492,13 +6520,13 @@
                           <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
                           <XAxis dataKey="date" ticks={xTicks} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "rgba(148,163,184,0.3)" }} />
                           <YAxis
-                            domain={neniYDomain}
-                            ticks={neniYTicks}
-                            tickFormatter={(v) => formatAxisValue(v, currency, viewMode)}
+                            domain={neniYAxis.domain}
+                            ticks={neniYAxis.ticks}
+                            tickFormatter={(v) => formatAxisValue(v, currency, viewMode, neniYAxis.tickStep)}
                             tick={{ fontSize: 11, fill: "#64748b" }}
                             tickLine={false}
                             axisLine={{ stroke: "rgba(148,163,184,0.3)" }}
-                            width={70}
+                            width={84}
                           />
                           <Tooltip
                             formatter={(v, name) =>
