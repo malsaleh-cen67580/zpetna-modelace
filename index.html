@@ -4364,6 +4364,9 @@
         const minStep = currency === "CZK" ? 50000 : 2000;
         const monthlyStep = currency === "CZK" ? 5000 : 200;
         const currencyOptions = activeMode === "MMA" ? ["CZK"] : ["CZK", "EUR", "USD"];
+        const currencyToggleSlots =
+          activeMode === "MMA" ? [null, "CZK", null] : currencyOptions;
+        const headerToggleWidthClass = "w-[150px]";
 
         return (
           <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
@@ -4463,8 +4466,13 @@
                   </label>
 
                   {/* Přepínače vpravo za investičními kolonkami: nahoře Režim, dole Měna */}
-                  <div className="flex shrink-0 flex-col items-start gap-1 sm:col-span-2 lg:col-span-1">
-                    <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur">
+                  <div className="flex shrink-0 flex-col items-stretch gap-1 sm:col-span-2 lg:col-span-1">
+                    <div
+                      className={
+                        "grid grid-cols-2 gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur " +
+                        headerToggleWidthClass
+                      }
+                    >
                       {["EP", "MMA"].map((mode) => {
                         const active = activeMode === mode;
                         return (
@@ -4473,7 +4481,7 @@
                             type="button"
                             onClick={() => setActiveMode(mode)}
                             className={
-                              "rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] transition-all " +
+                              "w-full rounded-full px-3 py-0.5 text-center text-[10px] font-semibold tracking-[0.14em] transition-all " +
                               (active ? "bg-ep-gold text-ep-navy shadow-sm" : "text-white/70 hover:text-white")
                             }
                             aria-pressed={active}
@@ -4484,11 +4492,17 @@
                       })}
                     </div>
                     <div
-                      className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur"
+                      className={
+                        "grid grid-cols-3 gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur " +
+                        headerToggleWidthClass
+                      }
                       role="tablist"
                       aria-label="Volba měny"
                     >
-                      {currencyOptions.map((c) => {
+                      {currencyToggleSlots.map((c, idx) => {
+                        if (!c) {
+                          return <span key={"currency-spacer-" + idx} aria-hidden="true" />;
+                        }
                         const active = currency === c;
                         return (
                           <button
@@ -4498,7 +4512,7 @@
                             aria-selected={active}
                             onClick={() => setCurrency(c)}
                             className={
-                              "rounded-full px-3 py-0.5 text-[10px] font-semibold tracking-wider transition-all " +
+                              "w-full rounded-full px-3 py-0.5 text-center text-[10px] font-semibold tracking-wider transition-all " +
                               (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
                             }
                           >
