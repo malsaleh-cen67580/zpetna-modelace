@@ -4391,7 +4391,7 @@
 
                 <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center lg:justify-end">
 
-                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
+                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[300px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Jednorázová investice
@@ -4403,7 +4403,7 @@
                       value={initialInvestment.toLocaleString(currency === "CZK" ? "cs-CZ" : currency === "EUR" ? "de-DE" : "en-US")}
                       onFocus={(e) => e.target.select()}
                       onChange={handleAmount}
-                      className="min-w-0 w-full bg-transparent text-right text-[13px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
+                      className="min-w-0 w-full bg-transparent text-right text-[15px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
                     />
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[11px] font-semibold tracking-wider text-ep-gold/90">{currency}</span>
@@ -4428,7 +4428,7 @@
                     </div>
                   </label>
 
-                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
+                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[300px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Pravidelná investice
@@ -4440,7 +4440,7 @@
                       value={monthlyContribution.toLocaleString(currency === "CZK" ? "cs-CZ" : currency === "EUR" ? "de-DE" : "en-US")}
                       onFocus={(e) => e.target.select()}
                       onChange={handleMonthlyContribution}
-                      className="min-w-0 w-full bg-transparent text-right text-[13px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
+                      className="min-w-0 w-full bg-transparent text-right text-[15px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
                     />
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[11px] font-semibold tracking-wider text-ep-gold/90">{currency}</span>
@@ -6541,7 +6541,7 @@
                       </div>
                     </div>
 
-                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
+                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[300px]">
                       <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                       <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                         Jednorázová investice
@@ -6557,7 +6557,7 @@
                           if (!Number.isFinite(parsed)) return;
                           setInitialInvestment(Math.max(0, parsed));
                         }}
-                        className="min-w-0 w-full bg-transparent text-right text-[13px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
+                        className="min-w-0 w-full bg-transparent text-right text-[15px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
                       />
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[11px] font-semibold tracking-wider text-ep-gold/90">{currency}</span>
@@ -6582,7 +6582,7 @@
                       </div>
                     </label>
 
-                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
+                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[300px]">
                       <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                       <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                         Pravidelná investice
@@ -6598,7 +6598,7 @@
                           if (!Number.isFinite(parsed)) return;
                           setMonthlyContribution(Math.max(0, parsed));
                         }}
-                        className="min-w-0 w-full bg-transparent text-right text-[13px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
+                        className="min-w-0 w-full bg-transparent text-right text-[15px] font-semibold text-white outline-none placeholder:text-white/40 pr-1"
                       />
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[11px] font-semibold tracking-wider text-ep-gold/90">{currency}</span>
