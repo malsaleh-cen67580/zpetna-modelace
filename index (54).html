@@ -4214,32 +4214,6 @@
         if (to === "CZK") return roundNiceCZK(raw);
         return Math.round(raw / 100) * 100;
       }
-      /* ------------------------------------------------------------------ */
-      /*  Mode config                                                        */
-      /* ------------------------------------------------------------------ */
-      const MODE_CONFIG = {
-        "erste-premier": {
-          brandName: "ERSTE\u00a0PREMIER",
-          showInflation: false,
-          allowedCurrencies: ["CZK", "EUR", "USD"],
-          allowAllocationEditing: true,
-          allowCustomPortfolio: true,
-          allowSubCategoryFilter: true,
-          showCustomBuilderActions: true,
-          rrcHorizonLabel: "5 let a více",
-        },
-        "mass-affluent": {
-          brandName: "MASS\u00a0AFFLUENT",
-          showInflation: true,
-          allowedCurrencies: ["CZK"],
-          allowAllocationEditing: false,
-          allowCustomPortfolio: false,
-          allowSubCategoryFilter: false,
-          showCustomBuilderActions: false,
-          rrcHorizonLabel: "5 let a více",
-        },
-      };
-
       const InvestmentContext = createContext(null);
 
       function InvestmentProvider({ children }) {
@@ -4247,7 +4221,6 @@
         const [initialInvestment, setInitialInvestment] = useState(1_000_000);
         const [monthlyContribution, setMonthlyContribution] = useState(0);
         const [appMode, setAppMode] = useState("erste-premier");
-        const modeConfig = MODE_CONFIG[appMode];
 
         const setCurrency = (next) => {
           setCurrencyState((prev) => {
@@ -4279,7 +4252,6 @@
             formatMoney,
             appMode,
             setAppMode,
-            modeConfig,
           };
         }, [currency, initialInvestment, monthlyContribution, appMode]);
 
