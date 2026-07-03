@@ -3166,6 +3166,25 @@
         if (cat.sub === "Komodity") return "commodities";
         return "alternatives";
       }
+      function combineSimulatedWeeklyReturns(weightMap) {
+        const len = WEEKLY_DATES.length - 1;
+        const out = new Array(len).fill(0);
+        Object.entries(weightMap).forEach(([seriesKey, weight]) => {
+          const series = SIMULATED_WEEKLY_RETURNS[seriesKey];
+          const normalizedWeight = (Number(weight) || 0) / 100;
+          if (!series || normalizedWeight <= 0) return;
+          for (let i = 0; i < len; i++) {
+            out[i] += (series[i] || 0) * normalizedWeight;
+          }
+        });
+        return out;
+      }
+      const MMA_MIX_SIMULATED_WEEKLY_RETURNS = {
+        conservative: combineSimulatedWeeklyReturns({ govBonds: 55, corpBonds: 25, highYield: 5, equityEurope: 10, alternatives: 5 }),
+        balanced: combineSimulatedWeeklyReturns({ govBonds: 25, corpBonds: 20, highYield: 10, equityGlobal: 25, equityEurope: 10, alternatives: 10 }),
+        dynamic: combineSimulatedWeeklyReturns({ govBonds: 10, corpBonds: 10, highYield: 10, equityGlobal: 35, equityNorthAmerica: 20, alternatives: 15 }),
+        equity: combineSimulatedWeeklyReturns({ corpBonds: 5, highYield: 5, equityGlobal: 40, equityNorthAmerica: 25, sector: 15, alternatives: 10 }),
+      };
 
       const BENCHMARK_INFLATION_WEEKLY = aggregateDailyReturnsToWeekly(BENCHMARK_INFLATION);
 
@@ -3934,6 +3953,52 @@
         },
       };
       const MMA_PRESET_PORTFOLIOS = Object.values(MMA_PORTFOLIOS);
+      const MMA_SIMULATED_MIXES = [
+        {
+          id: "mma-mix-konzervativni",
+          name: "Konzervativní Mix",
+          sleeve: "Mixy",
+          mainCategory: "Smíšené",
+          subCategory: "Global",
+          p1y: 3.08,
+          p3y: 2.56,
+          p5y: 2.24,
+          simulationSeriesKey: "conservative",
+        },
+        {
+          id: "mma-mix-vyvazeny",
+          name: "Vyvážený Mix",
+          sleeve: "Mixy",
+          mainCategory: "Smíšené",
+          subCategory: "Global",
+          p1y: 4.61,
+          p3y: 3.94,
+          p5y: 3.48,
+          simulationSeriesKey: "balanced",
+        },
+        {
+          id: "mma-mix-dynamicky",
+          name: "Dynamický Mix",
+          sleeve: "Mixy",
+          mainCategory: "Smíšené",
+          subCategory: "Global",
+          p1y: 5.84,
+          p3y: 4.76,
+          p5y: 4.18,
+          simulationSeriesKey: "dynamic",
+        },
+        {
+          id: "mma-mix-akciovy",
+          name: "Akciový Mix",
+          sleeve: "Mixy",
+          mainCategory: "Smíšené",
+          subCategory: "Global",
+          p1y: 7.18,
+          p3y: 5.62,
+          p5y: 4.86,
+          simulationSeriesKey: "equity",
+        },
+      ];
 
       /* ------------------------------------------------------------------ */
       /*  Investment Context (currency + initial amount)                     */
@@ -4304,7 +4369,7 @@
           <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
             <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
             <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
-              <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+              <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
                 <div className="flex items-center gap-4">
                   <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5 backdrop-blur">
                     <TrendingUpIcon size={20} className="text-ep-gold" />
@@ -4321,8 +4386,40 @@
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end lg:flex-1">
-<label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
+                <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
+<div className="flex shrink-0 items-center gap-2">
+                  <div
+                    className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur"
+                    role="tablist"
+                    aria-label="Volba měny"
+                    style={{ minWidth: "90px" }}
+                  >
+                    {currencyOptions.map((c) => {
+                      const active = currency === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setCurrency(c)}
+                          className={
+                            "rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " +
+                            (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
+                          }
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+<div className="flex shrink-0 items-center">
+                  <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
+                </div>
+
+<label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
                   <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                   <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                     Jednorázová investice
@@ -4359,7 +4456,7 @@
                   </div>
                 </label>
 
-<label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
+<label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
                   <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                   <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                     Pravidelná investice
@@ -4396,34 +4493,6 @@
                   </div>
                 </label>
 
-<div className="flex shrink-0 items-center gap-2 lg:self-center">
-                  <div
-                    className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur"
-                    role="tablist"
-                    aria-label="Volba měny"
-                    style={{ minWidth: "90px" }}
-                  >
-                    {currencyOptions.map((c) => {
-                      const active = currency === c;
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          role="tab"
-                          aria-selected={active}
-                          onClick={() => setCurrency(c)}
-                          className={
-                            "rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " +
-                            (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
-                          }
-                        >
-                          {c}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
-                </div>
                 </div>
               </div>
             </div>
@@ -4502,7 +4571,7 @@
           { label: "Vlastní", months: "custom", title: "Vlastní rozsah dat" },
         ];
         const effectiveMonthlyContribution = monthlyContribution;
-        const showSimulation = effectiveMonthlyContribution > 0;
+        const showSimulation = initialInvestment > 0 || effectiveMonthlyContribution > 0;
         useEffect(() => {
           setCompareStrategyIds(defaultComparisonIds || []);
           setShowSleeves(false);
@@ -4850,7 +4919,7 @@
             </div>
             {!showSimulation && (
               <p className="mt-3 text-center text-sm text-slate-500">
-                Pro zobrazení simulace výkonnosti zadejte pravidelnou investici výše.
+                Pro zobrazení simulace výkonnosti zadejte jednorázovou nebo pravidelnou investici výše.
               </p>
             )}
           </section>
@@ -5305,7 +5374,6 @@
                         </div>
                       </div>
                     </header>
-                    <p className="mb-2 text-sm leading-relaxed text-slate-500">{p.tagline}</p>
                     <div className="mb-4 inline-flex items-center rounded-full border border-ep-gold/30 bg-ep-gold/8 px-2.5 py-0.5 text-[11px] font-semibold text-ep-gold/80">
                       Horizont: 5 let a více
                     </div>
@@ -6125,7 +6193,7 @@
 
         // Build flat list of all funds available in Zpětná modelace for the selected currency.
         const allFunds = useMemo(() => {
-          return activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
+          const catalogFunds = activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
             const perf = perfData[name] || {};
             const isin = fundIsin || isinFor(name);
             const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
@@ -6141,9 +6209,23 @@
               p1y: perf.p1y ?? null,
               p3y: perf.p3y ?? null,
               p5y: perf.p5y ?? null,
+              isSimulated: false,
             };
           });
-        }, [activeCatalogFunds, perfData, activeIsins, currency]);
+          if (activeMode !== "MMA" || currency !== "CZK") {
+            return catalogFunds;
+          }
+          return [
+            ...catalogFunds,
+            ...MMA_SIMULATED_MIXES.map((mix) => ({
+              ...mix,
+              currency,
+              isin: "",
+              category: `${mix.mainCategory} · ${mix.subCategory}`,
+              isSimulated: true,
+            })),
+          ];
+        }, [activeCatalogFunds, perfData, activeIsins, currency, activeMode]);
 
         const categories = useMemo(() => {
           const cats = new Set(allFunds.map((f) => f.mainCategory));
@@ -6241,6 +6323,14 @@
           // Pre-compute real NAV-based series for all funds that have daily return data
           const realSeries = {};
           compFunds.forEach((f) => {
+            if (f.simulationSeriesKey && MMA_MIX_SIMULATED_WEEKLY_RETURNS[f.simulationSeriesKey]) {
+              realSeries[f.id] = computeVariableRateSeries(
+                initialInvestment,
+                monthlyContribution,
+                MMA_MIX_SIMULATED_WEEKLY_RETURNS[f.simulationSeriesKey]
+              );
+              return;
+            }
             const returns = getFundReturnSeries(f.name, currency);
             if (returns) {
               realSeries[f.id] = computeVariableRateSeries(
@@ -6373,7 +6463,7 @@
             <header className="sticky top-0 z-40 bg-ep-gradient text-white shadow-premium">
               <div className="absolute inset-0 bg-ep-radial pointer-events-none" />
               <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
-                <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+                <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
                   <div className="flex items-center gap-4">
                   <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5">
                     <BarChart3Icon size={20} className="text-ep-gold" />
@@ -6389,9 +6479,27 @@
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end lg:flex-1">
+                  <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
 
-                    <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur" role="tablist" aria-label="Volba měny" style={{ minWidth: "90px" }}>
+                      {currencyOptions.map((c) => {
+                        const active = currency === c;
+                        return (
+                          <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
+                            className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
+                            {c}
+                          </button>
+                        );
+                      })}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center">
+                      <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
+                    </div>
+
+                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Jednorázová investice
@@ -6432,7 +6540,7 @@
                     </div>
                   </label>
 
-                    <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
+                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Pravidelná investice
@@ -6473,20 +6581,6 @@
                     </div>
                   </label>
 
-                    <div className="flex shrink-0 items-center gap-2 lg:self-center">
-                      <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur" role="tablist" aria-label="Volba měny" style={{ minWidth: "90px" }}>
-                      {currencyOptions.map((c) => {
-                        const active = currency === c;
-                        return (
-                          <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
-                            className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
-                            {c}
-                          </button>
-                        );
-                      })}
-                      </div>
-                      <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -6615,8 +6709,15 @@
                                 <div className="flex items-center gap-2">
                                   {selected && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />}
                                   <div className="min-w-0">
-                                    <div className={"text-xs font-semibold " + (selected ? "text-ep-navy" : "text-slate-700")}>{fund.name}</div>
-                                    <div className="mt-0.5 text-[10px] text-slate-500">{[fund.currency, fund.sleeve, fund.isin ? `ISIN ${fund.isin}` : "ISIN doplníme"].filter(Boolean).join(" · ")}</div>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <div className={"text-xs font-semibold " + (selected ? "text-ep-navy" : "text-slate-700")}>{fund.name}</div>
+                                      {fund.isSimulated && (
+                                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
+                                          Simulace
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="mt-0.5 text-[10px] text-slate-500">{[fund.currency, fund.sleeve, fund.isin ? `ISIN ${fund.isin}` : fund.isSimulated ? "Simulovaná data" : "ISIN doplníme"].filter(Boolean).join(" · ")}</div>
                                   </div>
                                 </div>
                               </td>
@@ -6644,7 +6745,7 @@
                     </table>
                   </div>
                   <div className="border-t border-slate-100 px-5 py-3 text-[11px] text-slate-400">
-                    Kliknutím na fond ho přidáte do srovnání (max. 8). Výkonnost p.a. = průměrný roční výnos za dané období.
+                    Kliknutím na fond ho přidáte do srovnání (max. 8). Výkonnost p.a. = průměrný roční výnos za dané období. V MMA režimu jsou MIXy označené jako simulace.
                   </div>
                 </section>
 
@@ -6657,6 +6758,11 @@
                         <p className="text-sm text-slate-500">
                           Simulovaný vývoj investovaných finančních prostředků na základě historické výkonnosti.
                         </p>
+                        {compFunds.some((fund) => fund.isSimulated) && (
+                          <p className="mt-1 text-xs font-medium text-amber-700">
+                            MIXy v MMA režimu používají konzervativně simulované výkonnosti oddělené od reálných fondových dat.
+                          </p>
+                        )}
                       </div>
                       <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
                         {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((opt) => (
@@ -6680,7 +6786,7 @@
                               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
                               <span className="truncate">{f.name}</span>
                             </div>
-                            <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : "ISIN doplníme"}</div>
+                            <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : f.isSimulated ? "Simulovaná data" : "ISIN doplníme"}</div>
                             <div className="mt-1 text-base font-semibold ep-text-navy">
                               {finalValue === null || finalValue === undefined
                                 ? "–"
@@ -6836,7 +6942,7 @@
                                   <span className="h-2.5 w-2.5 rounded-full shrink-0 self-start mt-1" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
                                   <div>
                                     <div className="text-xs font-semibold text-slate-700">{f.name}</div>
-                                    <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : "ISIN doplníme"}</div>
+                                    <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : f.isSimulated ? "Simulovaná data" : "ISIN doplníme"}</div>
                                   </div>
                                 </td>
                                 <td className="px-3 py-2 text-right">{fmtPct(f.p1y)}</td>
