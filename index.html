@@ -4386,13 +4386,13 @@
                   </div>
                 </div>
 
-                <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
-                  <div className="flex shrink-0 items-center gap-2">
+                <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
+                  {/* Přepínač Měny + Přepínač Režimu — vertikální blok vpravo vedle brandingu */}
+                  <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:col-span-2 lg:col-span-1">
                     <div
-                      className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur"
+                      className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur"
                       role="tablist"
                       aria-label="Volba měny"
-                      style={{ minWidth: "90px" }}
                     >
                       {currencyOptions.map((c) => {
                         const active = currency === c;
@@ -4404,7 +4404,7 @@
                             aria-selected={active}
                             onClick={() => setCurrency(c)}
                             className={
-                              "rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " +
+                              "rounded-full px-3 py-1 text-[11px] font-semibold tracking-wider transition-all " +
                               (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
                             }
                           >
@@ -4413,13 +4413,30 @@
                         );
                       })}
                     </div>
+                    <div
+                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur"
+                    >
+                      {["EP", "MMA"].map((mode) => {
+                        const active = activeMode === mode;
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setActiveMode(mode)}
+                            className={
+                              "rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.18em] transition-all " +
+                              (active ? "bg-ep-gold text-ep-navy shadow-sm" : "text-white/70 hover:text-white")
+                            }
+                            aria-pressed={active}
+                          >
+                            {mode}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center">
-                    <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
-                  </div>
-
-                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
+                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Jednorázová investice
@@ -4456,7 +4473,7 @@
                     </div>
                   </label>
 
-                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
+                  <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                     <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                       Pravidelná investice
@@ -6478,27 +6495,40 @@
                       </div>
                     </div>
                   </div>
-                  <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
+                  <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
 
-                    <div className="flex shrink-0 items-center gap-2">
-                      <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur" role="tablist" aria-label="Volba měny" style={{ minWidth: "90px" }}>
+                    {/* Přepínač Měny + Přepínač Režimu — vertikální blok vpravo vedle brandingu */}
+                    <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:col-span-2 lg:col-span-1">
+                      <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur" role="tablist" aria-label="Volba měny">
                         {currencyOptions.map((c) => {
                           const active = currency === c;
                           return (
                             <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
-                              className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
+                              className={"rounded-full px-3 py-1 text-[11px] font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
                               {c}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur">
+                        {["EP", "MMA"].map((mode) => {
+                          const active = activeMode === mode;
+                          return (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setActiveMode(mode)}
+                              className={"rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.18em] transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-sm" : "text-white/70 hover:text-white")}
+                              aria-pressed={active}
+                            >
+                              {mode}
                             </button>
                           );
                         })}
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center">
-                      <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
-                    </div>
-
-                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
+                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
                       <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                       <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                         Jednorázová investice
@@ -6539,7 +6569,7 @@
                       </div>
                     </label>
 
-                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[240px]">
+                    <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[220px]">
                       <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                       <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
                         Pravidelná investice
