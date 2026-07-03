@@ -3634,7 +3634,9 @@
             if (!Number.isFinite(currentValue)) return;
             nextRow[key] =
               mode === "percent"
-                ? roundChartNumber(currentValue - percentOffsets[key])
+                ? (Math.abs(percentOffsets[key]) > 1e-9
+                    ? roundChartNumber(((currentValue / percentOffsets[key]) - 1) * 100)
+                    : 0)
                 : roundChartNumber(currentValue * valueScales[key]);
           });
           return nextRow;
@@ -4681,7 +4683,7 @@
                 key,
                 label,
                 color,
-                dataKey: viewMode === "percent" ? `${key}Pct` : key,
+                dataKey: key,
               })
             ),
           [allocation, viewMode]
@@ -4706,13 +4708,13 @@
               if (!compareStrategyIds.includes(strategy.id)) return;
               const compareRow = allComparisonSeriesMap[strategy.id]?.[index];
               if (!compareRow) return;
-              extra[`comparison_${strategy.id}`] = viewMode === "percent" ? compareRow.portfolioPct : compareRow.portfolio;
+              extra[`comparison_${strategy.id}`] = compareRow.portfolio;
             });
             return { ...row, ...extra };
           });
         }, [rawData, viewMode, compareStrategyIds, allComparisonSeriesMap, comparisonStrategies]);
-        const portfolioKey = viewMode === "percent" ? "portfolioPct" : "portfolio";
-        const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
+        const portfolioKey = "portfolio";
+        const inflationKey = "inflation";
         const showInflation = activeMode === "MMA";
         const activeDataKeys = useMemo(() => {
           if (!showSimulation) return [];
@@ -6423,7 +6425,6 @@
           // Pre-compute real NAV-based series for all funds that have daily return data
           const realSeries = {};
           compFunds.forEach((f) => {
-            if (f.sleeve === "Mixy") return; // MIXY: no chart data
             if (f.simulationSeriesKey && MMA_MIX_SIMULATED_WEEKLY_RETURNS[f.simulationSeriesKey]) {
               realSeries[f.id] = computeVariableRateSeries(
                 initialInvestment,
@@ -6482,8 +6483,8 @@
           });
         }, [compFunds, initialInvestment, monthlyContribution]);
         const neniDataKeys = useMemo(
-          () => compFunds.map((f) => (viewMode === "percent" ? `${f.id}Pct` : f.id)),
-          [compFunds, viewMode]
+          () => compFunds.map((f) => f.id),
+          [compFunds]
         );
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
 
@@ -6918,7 +6919,7 @@
 
                     <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       {compFunds.map((f, idx) => {
-                        const valueKey = viewMode === "percent" ? `${f.id}Pct` : f.id;
+                        const valueKey = f.id;
                         const finalValue = finalRow ? finalRow[valueKey] : null;
                         return (
                           <div key={f.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -6926,11 +6927,9 @@
                               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
                               <span className="truncate">{f.name}</span>
                             </div>
-                            <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : f.sleeve === "Mixy" ? "Bez historických dat" : f.isSimulated ? "Simulovaná data" : "ISIN doplníme"}</div>
+                            <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : f.isSimulated || f.sleeve === "Mixy" ? "Simulovaná data" : "ISIN doplníme"}</div>
                             <div className="mt-1 text-base font-semibold ep-text-navy">
-                              {f.sleeve === "Mixy"
-                                ? <span className="text-slate-400">Není k dispozici</span>
-                                : finalValue === null || finalValue === undefined
+                                {finalValue === null || finalValue === undefined
                                 ? "–"
                                 : viewMode === "percent"
                                 ? `${finalValue >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %`
@@ -7049,7 +7048,7 @@
                             <Area
                               key={f.id}
                               type="linear"
-                              dataKey={viewMode === "percent" ? `${f.id}Pct` : f.id}
+                              dataKey={f.id}
                               name={f.name}
                               stroke={NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length]}
                               strokeWidth={2.8}
