@@ -6203,6 +6203,8 @@
         const minStep = currency === "CZK" ? 50000 : 2000;
         const monthlyStep = currency === "CZK" ? 5000 : 200;
         const currencyOptions = activeMode === "MMA" ? ["CZK"] : ["CZK", "EUR", "USD"];
+        const currencyToggleSlots =
+          activeMode === "MMA" ? [null, "CZK", null] : currencyOptions;
 
         useEffect(() => {
           if (activeMode === "MMA" && currency !== "CZK") {
@@ -6494,7 +6496,7 @@
               <div className="relative mx-auto flex max-w-[1400px] flex-col gap-2.5 px-4 py-2.5 md:px-7 md:py-3">
                 <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
                   <div className="flex items-center gap-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-ep-gold/40 bg-white/5 backdrop-blur">
                     <BarChart3Icon size={20} className="text-ep-gold" />
                   </div>
                     <div className="leading-tight">
@@ -6508,38 +6510,7 @@
                       </div>
                     </div>
                   </div>
-                  <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:justify-end">
-
-                    {/* Přepínač Měny + Přepínač Režimu — vertikální blok vpravo vedle brandingu */}
-                    <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:col-span-2 lg:col-span-1">
-                      <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur" role="tablist" aria-label="Volba měny">
-                        {currencyOptions.map((c) => {
-                          const active = currency === c;
-                          return (
-                            <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
-                              className={"rounded-full px-3 py-1 text-[11px] font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
-                              {c}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur">
-                        {["EP", "MMA"].map((mode) => {
-                          const active = activeMode === mode;
-                          return (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => setActiveMode(mode)}
-                              className={"rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.18em] transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-sm" : "text-white/70 hover:text-white")}
-                              aria-pressed={active}
-                            >
-                              {mode}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                  <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center lg:justify-end">
 
                     <label className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:min-w-[300px]">
                       <CoinsIcon size={16} className="text-ep-gold shrink-0" />
@@ -6622,6 +6593,64 @@
                         </span>
                       </div>
                     </label>
+
+                    {/* Přepínače vpravo za investičními kolonkami: nahoře Režim, dole Měna */}
+                    <div className="flex shrink-0 flex-col items-stretch gap-1 sm:col-span-2 lg:col-span-1">
+                      <div
+                        className={
+                          "grid grid-cols-2 gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur " +
+                          "w-[150px]"
+                        }
+                      >
+                        {["EP", "MMA"].map((mode) => {
+                          const active = activeMode === mode;
+                          return (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setActiveMode(mode)}
+                              className={
+                                "w-full rounded-full px-3 py-0.5 text-center text-[10px] font-semibold tracking-[0.14em] transition-all " +
+                                (active ? "bg-ep-gold text-ep-navy shadow-sm" : "text-white/70 hover:text-white")
+                              }
+                              aria-pressed={active}
+                            >
+                              {mode}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div
+                        className={
+                          "grid grid-cols-3 gap-1 rounded-full border border-white/15 bg-white/5 p-0.5 backdrop-blur " +
+                          "w-[150px]"
+                        }
+                        role="tablist"
+                        aria-label="Volba měny"
+                      >
+                        {currencyToggleSlots.map((c, idx) => {
+                          if (!c) {
+                            return <span key={"currency-spacer-" + idx} aria-hidden="true" />;
+                          }
+                          const active = currency === c;
+                          return (
+                            <button
+                              key={c}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
+                              className={
+                                "w-full rounded-full px-3 py-0.5 text-center text-[10px] font-semibold tracking-wider transition-all " +
+                                (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
+                              }
+                            >
+                              {c}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
