@@ -4136,18 +4136,25 @@
       const AVG_CZK_PER_EUR = 25;
       const AVG_CZK_PER_USD = 23;
       const FX_RATES_IN_CZK = { CZK: 1, EUR: AVG_CZK_PER_EUR, USD: AVG_CZK_PER_USD };
+      function roundNiceCZK(amount) {
+        if (amount <= 0) return 0;
+        if (amount < 50000) return Math.round(amount / 5000) * 5000;
+        if (amount < 200000) return Math.round(amount / 10000) * 10000;
+        if (amount < 1000000) return Math.round(amount / 50000) * 50000;
+        return Math.round(amount / 100000) * 100000;
+      }
       function convertAmount(amount, from, to) {
         if (from === to) return amount;
         const raw = (amount * FX_RATES_IN_CZK[from]) / FX_RATES_IN_CZK[to];
-        const step = to === "CZK" ? 1000 : 100;
-        return Math.round(raw / step) * step;
+        if (to === "CZK") return roundNiceCZK(raw);
+        return Math.round(raw / 100) * 100;
       }
       const InvestmentContext = createContext(null);
 
       function InvestmentProvider({ children }) {
         const [currency, setCurrencyState] = useState("CZK");
         const [initialInvestment, setInitialInvestment] = useState(1_000_000);
-        const [monthlyContribution, setMonthlyContribution] = useState(5_000);
+        const [monthlyContribution, setMonthlyContribution] = useState(0);
         const [appMode, setAppMode] = useState("erste-premier");
 
         const setCurrency = (next) => {
@@ -4246,7 +4253,6 @@
       function ModeToggle({ activeMode, setActiveMode }) {
         return (
           <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur">
-            <span className="pl-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/55">Režim</span>
             {["EP", "MMA"].map((mode) => {
               const active = activeMode === mode;
               return (
@@ -4305,7 +4311,7 @@
                   </div>
                   <div className="leading-tight">
                     <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
-                      ERSTE&nbsp;PREMIER
+                      {activeMode === "MMA" ? "MASS\u00a0AFFLUENT" : "ERSTE\u00a0PREMIER"}
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
@@ -4316,9 +4322,6 @@
                 </div>
 
                 <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end lg:flex-1">
-                  <div className="flex justify-end lg:basis-full">
-                    <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
-                  </div>
 <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
                   <CoinsIcon size={16} className="text-ep-gold shrink-0" />
                   <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-white/60 md:inline">
@@ -4393,29 +4396,33 @@
                   </div>
                 </label>
 
-<div
-                  className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur lg:self-center"
-                  role="tablist"
-                  aria-label="Volba měny"
-                >
-                  {currencyOptions.map((c) => {
-                    const active = currency === c;
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setCurrency(c)}
-                        className={
-                          "rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " +
-                          (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
-                        }
-                      >
-                        {c}
-                      </button>
-                    );
-                  })}
+<div className="flex shrink-0 items-center gap-2 lg:self-center">
+                  <div
+                    className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur"
+                    role="tablist"
+                    aria-label="Volba měny"
+                    style={{ minWidth: "90px" }}
+                  >
+                    {currencyOptions.map((c) => {
+                      const active = currency === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setCurrency(c)}
+                          className={
+                            "rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " +
+                            (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")
+                          }
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
                 </div>
                 </div>
               </div>
@@ -4495,6 +4502,7 @@
           { label: "Vlastní", months: "custom", title: "Vlastní rozsah dat" },
         ];
         const effectiveMonthlyContribution = monthlyContribution;
+        const showSimulation = effectiveMonthlyContribution > 0;
         useEffect(() => {
           setCompareStrategyIds(defaultComparisonIds || []);
           setShowSleeves(false);
@@ -4549,6 +4557,7 @@
         const inflationKey = viewMode === "percent" ? "inflationPct" : "inflation";
         const showInflation = activeMode === "MMA";
         const activeDataKeys = useMemo(() => {
+          if (!showSimulation) return [];
           const keys = [portfolioKey, ...(showInflation ? [inflationKey] : [])];
           if (showSleeves && canSplitSleeves) {
             activeSleeveSeries.forEach((series) => keys.push(series.dataKey));
@@ -4556,7 +4565,7 @@
             activeComparisonStrategies.forEach((strategy) => keys.push(`comparison_${strategy.id}`));
           }
           return keys;
-        }, [portfolioKey, showInflation, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
+        }, [showSimulation, portfolioKey, showInflation, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
         const displayData = useMemo(() => {
           let filtered;
@@ -4791,17 +4800,19 @@
                   <Tooltip content={<EpTooltip viewMode={viewMode} />} cursor={{ stroke: "#143a73", strokeOpacity: 0.25, strokeWidth: 1 }} />
                   <Legend verticalAlign="top" height={32} iconType="circle" wrapperStyle={{ fontSize: 12, color: "#475569" }} />
                   <ReferenceLine y={referenceValue} ifOverflow="extendDomain" stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />
-                  <Area
-                    type="linear"
-                    name="Vybrané portfolio"
-                    dataKey={portfolioKey}
-                    stroke="#1e5fb8"
-                    strokeWidth={showSleeves && canSplitSleeves ? 3 : 2.5}
-                    strokeDasharray={showSleeves && canSplitSleeves ? "6 3" : undefined}
-                    fill={showSleeves && canSplitSleeves ? "transparent" : `url(#${portfolioGradientId})`}
-                    activeDot={{ r: 4 }}
-                  />
-                  {showSleeves && canSplitSleeves
+                  {showSimulation && (
+                    <Area
+                      type="linear"
+                      name="Vybrané portfolio"
+                      dataKey={portfolioKey}
+                      stroke="#1e5fb8"
+                      strokeWidth={showSleeves && canSplitSleeves ? 3 : 2.5}
+                      strokeDasharray={showSleeves && canSplitSleeves ? "6 3" : undefined}
+                      fill={showSleeves && canSplitSleeves ? "transparent" : `url(#${portfolioGradientId})`}
+                      activeDot={{ r: 4 }}
+                    />
+                  )}
+                  {showSimulation && showSleeves && canSplitSleeves
                     ? activeSleeveSeries.map((series) => (
                         <Area
                           key={series.key}
@@ -4816,10 +4827,10 @@
                         />
                       ))
                     : null}
-                  {showInflation ? (
+                  {showSimulation && showInflation ? (
                     <Area type="linear" name={viewMode === "percent" ? "Reálná změna po inflaci" : "Reálná hodnota po inflaci"} dataKey={inflationKey} stroke="#0f766e" strokeWidth={2.6} strokeDasharray="6 4" fill="transparent" activeDot={{ r: 3.5 }} />
                   ) : null}
-                {!showSleeves && activeComparisonStrategies.map((strategy) => (
+                {showSimulation && !showSleeves && activeComparisonStrategies.map((strategy) => (
                   <Area
                     key={strategy.id}
                    type="linear"
@@ -4837,6 +4848,11 @@
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            {!showSimulation && (
+              <p className="mt-3 text-center text-sm text-slate-500">
+                Pro zobrazení simulace výkonnosti zadejte pravidelnou investici výše.
+              </p>
+            )}
           </section>
         );
       }
@@ -5113,8 +5129,12 @@
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                 <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{total} / 100 %</div>
-                <button type="button" onClick={resetFunds} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold ep-text-navy transition hover:border-ep-blue/40 hover:bg-slate-50"><RotateCcwIcon size={14} />Obnovit výchozí</button>
-                <button type="button" onClick={() => setShowSearch((prev) => !prev)} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-ep-blue px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-ep-blue-light">+ Přidat fond</button>
+                {activeMode !== "MMA" && (
+                  <>
+                    <button type="button" onClick={resetFunds} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold ep-text-navy transition hover:border-ep-blue/40 hover:bg-slate-50"><RotateCcwIcon size={14} />Obnovit výchozí</button>
+                    <button type="button" onClick={() => setShowSearch((prev) => !prev)} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-ep-blue px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-ep-blue-light">+ Přidat fond</button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -5145,12 +5165,12 @@
             )}
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70">
-              <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(120px,0.75fr)_minmax(88px,0.5fr)_32px] gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 md:grid-cols-[minmax(0,1.7fr)_minmax(170px,0.9fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)_32px]">
+              <div className={`grid gap-2 border-b border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 ${activeMode === "MMA" ? "grid-cols-[minmax(0,1fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(120px,0.75fr)_minmax(88px,0.5fr)_32px] md:grid-cols-[minmax(0,1.7fr)_minmax(170px,0.9fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)_32px]"}`}>
                 <div>Fond / ISIN</div>
-                <div>Alokace</div>
+                {activeMode !== "MMA" && <div>Alokace</div>}
                 <div className="text-right">%</div>
-                <div className="hidden md:block text-right">Jednorázově</div>
-                <div></div>
+                <div className="text-right">Jednorázově</div>
+                {activeMode !== "MMA" && <div></div>}
               </div>
 
               <div>
@@ -5165,21 +5185,30 @@
                         const originalIndex = funds.findIndex((f) => f === fund);
                         const isin = isinFor(fund.name);
                         return (
-                          <div key={`${fund.name}-${originalIndex}`} className={`grid grid-cols-[minmax(0,1.5fr)_minmax(120px,0.75fr)_minmax(88px,0.5fr)_32px] gap-2 px-3 py-2.5 md:grid-cols-[minmax(0,1.7fr)_minmax(170px,0.9fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)_32px] ${rowIndex !== items.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                          <div key={`${fund.name}-${originalIndex}`} className={`grid gap-2 px-3 py-2.5 ${activeMode === "MMA" ? "grid-cols-[minmax(0,1fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(120px,0.75fr)_minmax(88px,0.5fr)_32px] md:grid-cols-[minmax(0,1.7fr)_minmax(170px,0.9fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)_32px]"} ${rowIndex !== items.length - 1 ? 'border-b border-slate-100' : ''}`}>
                             <div className="min-w-0">
                               <div className="truncate text-xs font-semibold ep-text-navy">{fund.name}</div>
                               <div className="mt-0.5 text-[10px] text-slate-500">{isin ? `ISIN ${isin}` : 'ISIN doplníme'}</div>
-                              <div className="mt-1 text-[10px] text-slate-400 md:hidden">{renderAmountCell(fund, true)}</div>
+                              {activeMode === "MMA" && <div className="mt-1 text-[10px] text-slate-400">{renderAmountCell(fund, true)}</div>}
+                              {activeMode !== "MMA" && <div className="mt-1 text-[10px] text-slate-400 md:hidden">{renderAmountCell(fund, true)}</div>}
                             </div>
-                            <div className="flex items-center px-1">
-                              <input type="range" min={0} max={100} step={1} value={Math.min(fund.weight, 100)} onChange={(e) => updateFundWeight(originalIndex, e.target.value)} style={{ "--val": `${Math.min(fund.weight, 100)}%` }} className="ep-slider" aria-label="Slider váhy fondu" />
-                            </div>
-                            <div className="relative self-center">
-                              <input type="number" min={0} max={100} step={1} value={fund.weight} onChange={(e) => updateFundWeight(originalIndex, e.target.value)} className="no-spin w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 pr-7 text-right text-xs font-semibold tabular-nums ep-text-navy outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Alokace fondu" onFocus={(e) => e.target.select()} />
-                              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">%</span>
-                            </div>
-                            <div className="hidden self-center text-right text-xs font-semibold tabular-nums ep-text-navy md:block">{renderAmountCell(fund)}</div>
-                            <button type="button" onClick={() => removeFund(originalIndex)} className="inline-flex h-7 w-7 items-center justify-center self-center rounded-md border border-transparent bg-transparent text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500" aria-label="Odebrat fond">×</button>
+                            {activeMode !== "MMA" && (
+                              <div className="flex items-center px-1">
+                                <input type="range" min={0} max={100} step={1} value={Math.min(fund.weight, 100)} onChange={(e) => updateFundWeight(originalIndex, e.target.value)} style={{ "--val": `${Math.min(fund.weight, 100)}%` }} className="ep-slider" aria-label="Slider váhy fondu" />
+                              </div>
+                            )}
+                            {activeMode !== "MMA" ? (
+                              <div className="relative self-center">
+                                <input type="number" min={0} max={100} step={1} value={fund.weight} onChange={(e) => updateFundWeight(originalIndex, e.target.value)} className="no-spin w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 pr-7 text-right text-xs font-semibold tabular-nums ep-text-navy outline-none focus:border-ep-blue focus:ring-2 focus:ring-ep-blue/20" aria-label="Alokace fondu" onFocus={(e) => e.target.select()} />
+                                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">%</span>
+                              </div>
+                            ) : (
+                              <div className="self-center text-right text-xs font-semibold tabular-nums ep-text-navy">{fund.weight} %</div>
+                            )}
+                            <div className="self-center text-right text-xs font-semibold tabular-nums ep-text-navy">{renderAmountCell(fund)}</div>
+                            {activeMode !== "MMA" && (
+                              <button type="button" onClick={() => removeFund(originalIndex)} className="inline-flex h-7 w-7 items-center justify-center self-center rounded-md border border-transparent bg-transparent text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500" aria-label="Odebrat fond">×</button>
+                            )}
                           </div>
                         );
                       })}
@@ -5276,7 +5305,10 @@
                         </div>
                       </div>
                     </header>
-                    <p className="mb-4 text-sm leading-relaxed text-slate-500">{p.tagline}</p>
+                    <p className="mb-2 text-sm leading-relaxed text-slate-500">{p.tagline}</p>
+                    <div className="mb-4 inline-flex items-center rounded-full border border-ep-gold/30 bg-ep-gold/8 px-2.5 py-0.5 text-[11px] font-semibold text-ep-gold/80">
+                      Horizont: 5 let a více
+                    </div>
                     <div className="mb-4 flex items-start gap-3.5">
                       <DonutChart allocation={displayAllocation} />
                       <AllocationLegend allocation={displayAllocation} />
@@ -6079,6 +6111,9 @@
           if (activeMode === "MMA" && currency !== "CZK") {
             setCurrency("CZK");
           }
+          if (activeMode === "MMA") {
+            setSubCategory("Všechny podtřídy");
+          }
         }, [activeMode, currency, setCurrency]);
 
         const perfData = FUND_PERF_DATA[currency] || {};
@@ -6345,7 +6380,7 @@
                   </div>
                     <div className="leading-tight">
                       <div className="font-serif text-xl font-semibold tracking-[0.18em] text-white md:text-2xl">
-                        ERSTE&nbsp;PREMIER
+                        {activeMode === "MMA" ? "MASS\u00a0AFFLUENT" : "ERSTE\u00a0PREMIER"}
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <div className="text-[11px] uppercase tracking-[0.32em] text-ep-gold/90 md:text-xs">
@@ -6355,9 +6390,6 @@
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end lg:flex-1">
-                    <div className="flex justify-end lg:basis-full">
-                      <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
-                    </div>
 
                     <label className="group flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 backdrop-blur transition focus-within:border-ep-gold/70 focus-within:bg-white/10 lg:w-[420px]">
                     <CoinsIcon size={16} className="text-ep-gold shrink-0" />
@@ -6441,16 +6473,19 @@
                     </div>
                   </label>
 
-                    <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur lg:self-center" role="tablist" aria-label="Volba měny">
-                    {currencyOptions.map((c) => {
-                      const active = currency === c;
-                      return (
-                        <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
-                          className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
-                          {c}
-                        </button>
-                      );
-                    })}
+                    <div className="flex shrink-0 items-center gap-2 lg:self-center">
+                      <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur" role="tablist" aria-label="Volba měny" style={{ minWidth: "90px" }}>
+                      {currencyOptions.map((c) => {
+                        const active = currency === c;
+                        return (
+                          <button key={c} type="button" role="tab" aria-selected={active} onClick={() => { setCurrency(c); setSelectedFunds([]); setCategory("Vše"); setSubCategory("Všechny podtřídy"); }}
+                            className={"rounded-full px-4 py-1.5 text-xs font-semibold tracking-wider transition-all " + (active ? "bg-ep-gold text-ep-navy shadow-md" : "text-white/70 hover:text-white")}>
+                            {c}
+                          </button>
+                        );
+                      })}
+                      </div>
+                      <ModeToggle activeMode={activeMode} setActiveMode={setActiveMode} />
                     </div>
                   </div>
                 </div>
@@ -6509,7 +6544,7 @@
                       </div>
                     </div>
                     {/* Subcategory filter row */}
-                    {subCategories.length > 1 && (
+                    {subCategories.length > 1 && activeMode !== "MMA" && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {subCategories.map((sub) => (
                           <button key={sub} type="button" onClick={() => setSubCategory(sub)}
@@ -6590,7 +6625,7 @@
                                   style={{ background: (NENI_CATEGORY_COLORS[fund.mainCategory] || "#64748b") + "18", color: NENI_CATEGORY_COLORS[fund.mainCategory] || "#64748b" }}>
                                  {getDisplayedMainCategoryLabel(fund.mainCategory, activeMode)}
                                 </span>
-                               {fund.subCategory && (
+                               {fund.subCategory && activeMode !== "MMA" && (
                                  <span className="ml-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
                                    {fund.subCategory}
                                  </span>
