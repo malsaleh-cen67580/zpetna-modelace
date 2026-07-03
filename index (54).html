@@ -4175,7 +4175,6 @@
           { name: "Fidelity Fund Global Income", sleeve: "Úroková složka", isin: "LU0882574998" },
           { name: "Fidelity Funds - Euro Corporate Bond Fund A-ACC-Euro", sleeve: "Úroková složka", isin: "LU0370787193" },
           { name: "Franklin European Corporate Bond Fund - A(acc)EUR", sleeve: "Úroková složka", isin: "LU0496369546" },
-          { name: "GOLDMAN SACHS USD GREEN BOND", sleeve: "Úroková složka", isin: "LU2578936853" },
           { name: "Goldman Sachs Euro Fixed Income", sleeve: "Úroková složka", isin: "LU0546917773" },
           { name: "Templeton Global Bond Fund", sleeve: "Úroková složka", isin: "LU0152980495" },
           { name: "BNP Paribas Funds Euro Money Market", sleeve: "Úroková složka", isin: "LU0083138064" },
@@ -4224,7 +4223,6 @@
           { name: "BNP Paribas Funds USD Money Market", sleeve: "Úroková složka", isin: "LU0012186622" },
           { name: "ERSTE RESERVE DOLLAR", sleeve: "Úroková složka", isin: "AT0000673249" },
           { name: "Franklin U.S. Dollar Short-Term Money Market", sleeve: "Úroková složka", isin: "LU0128526901" },
-          { name: "Měnový prémiový vklad v USD 06/2023", sleeve: "Úroková složka", isin: "UCER270624" },
           { name: "BNP Paribas Funds US Short Duration Bond", sleeve: "Úroková složka", isin: "LU0012182399" },
           { name: "Franklin U.S. Government Fund USD", sleeve: "Úroková složka", isin: "LU0543330301" },
           { name: "Templeton Global Bond Fund - A(acc)USD", sleeve: "Úroková složka", isin: "LU0252652382" },
@@ -6149,11 +6147,9 @@
         LU2155808657: { main: "Dluhopisové", sub: "Konvertibilní dluhopisy" },
         LU2451817873: { main: "Akciové", sub: "Evropa" },
         LU2484078758: { main: "Akciové", sub: "Sektory" },
-        LU2578936853: { main: "Dluhopisové", sub: "Korporátní dluhopisy" },
         LU2739071228: { main: "Akciové", sub: "Sektory" },
         LU2898087106: { main: "Akciové", sub: "Sektory" },
         LU3215558704: { main: "Akciové", sub: "Asie" },
-        UCER270624: { main: "Dluhopisové", sub: "Peněžní trh" },
       };
       function getFundCategoryInfo(fundName, currency, isin, sleeve) {
         const byIsin = isin ? FUND_CLASSIFICATION_BY_ISIN[String(isin).trim()] : null;
