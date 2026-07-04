@@ -2986,16 +2986,22 @@
         return null;
       }
 
-      function getTrailingAnnualizedReturnFromSeries(returns, months) {
+      function getTrailingAnnualizedReturnFromSeries(
+        returns,
+        months,
+        { initialInvestment = 1, monthlyContribution = 0 } = {}
+      ) {
         if (!Array.isArray(returns) || !returns.length) return null;
         const normalizedReturns = returns.map((value) => Number(value) || 0);
+        const normalizedInitialInvestment = Math.max(0, Number(initialInvestment) || 0);
+        const normalizedMonthlyContribution = Math.max(0, Number(monthlyContribution) || 0);
         const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
         if (firstActiveIndex < 0 || !TIMELINE.length) return 0;
         const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
-        const values = compoundSeries(1, normalizedReturns);
-        const lastIndex = Math.min(values.length - 1, TIMELINE.length - 1);
+        const lastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
         if (lastIndex <= firstUsableIndex) return 0;
-        const availableMonths = TIMELINE[lastIndex].monthsSinceStart - TIMELINE[firstUsableIndex].monthsSinceStart;
+        const availableMonths =
+          TIMELINE[lastIndex].monthsSinceStart - TIMELINE[firstUsableIndex].monthsSinceStart;
         if (availableMonths < months) return 0;
         const targetMonths = TIMELINE[lastIndex].monthsSinceStart - months;
         let startIndex = firstUsableIndex;
@@ -3005,7 +3011,19 @@
             break;
           }
         }
-        return annualisedReturn(values[startIndex], values[lastIndex], months);
+        const periodReturns = normalizedReturns.slice(startIndex + 1, lastIndex + 1);
+        if (!periodReturns.length) return 0;
+        let value = normalizedInitialInvestment;
+        let contributed = normalizedInitialInvestment;
+        for (let index = 0; index < periodReturns.length; index += 1) {
+          const absoluteIndex = startIndex + 1 + index;
+          if (WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[absoluteIndex]) {
+            value += normalizedMonthlyContribution;
+            contributed += normalizedMonthlyContribution;
+          }
+          value = value * (1 + periodReturns[index] / 100);
+        }
+        return annualisedReturn(contributed, value, months);
       }
 
       function getFallbackFundPerf(fundName, currency = "CZK") {
@@ -3017,15 +3035,36 @@
         return getAdjustedFundPerf(rawPerf, months);
       }
 
-      function computeFundHistoricalPerf({ name = "", isin = "", currency = "CZK" } = {}) {
+      function computeFundHistoricalPerf({
+        name = "",
+        isin = "",
+        currency = "CZK",
+        initialInvestment = 1,
+        monthlyContribution = 0,
+      } = {}) {
         const series = getFundReturnSeriesByIsin(isin) || getFundReturnSeries(name, currency);
         if (!series) {
           return getFallbackFundPerf(name, currency);
         }
         return {
-          p1y: +Number(getTrailingAnnualizedReturnFromSeries(series, 12) || 0).toFixed(2),
-          p3y: +Number(getTrailingAnnualizedReturnFromSeries(series, 36) || 0).toFixed(2),
-          p5y: +Number(getTrailingAnnualizedReturnFromSeries(series, 60) || 0).toFixed(2),
+          p1y: +Number(
+            getTrailingAnnualizedReturnFromSeries(series, 12, {
+              initialInvestment,
+              monthlyContribution,
+            }) || 0
+          ).toFixed(2),
+          p3y: +Number(
+            getTrailingAnnualizedReturnFromSeries(series, 36, {
+              initialInvestment,
+              monthlyContribution,
+            }) || 0
+          ).toFixed(2),
+          p5y: +Number(
+            getTrailingAnnualizedReturnFromSeries(series, 60, {
+              initialInvestment,
+              monthlyContribution,
+            }) || 0
+          ).toFixed(2),
         };
       }
 
@@ -3246,7 +3285,7 @@
         return { p1y, p3y, p5y };
       }
 
-      function computePortfolioPerf(funds, currency) {
+      function computePortfolioPerf(funds, currency, initialInvestment = 1, monthlyContribution = 0) {
         if (!funds || !funds.length) {
           return { performance1y: 0, performance3y: 0, performance5y: 0 };
         }
@@ -3259,11 +3298,26 @@
           acc[bucket] += Number(fund.weight) || 0;
           return acc;
         }, { bonds: 0, stocks: 0, alternatives: 0 });
-        const stats = computeStats(allocation, 100, funds, currency);
+        const weekly = weightedPeriodReturns(fundsBasedAllocation(funds, allocation, currency), currency);
         return {
-          performance1y: stats.performance1y || 0,
-          performance3y: stats.performance3y || 0,
-          performance5y: stats.performance5y || 0,
+          performance1y: +Number(
+            getTrailingAnnualizedReturnFromSeries(weekly, 12, {
+              initialInvestment,
+              monthlyContribution,
+            }) || 0
+          ).toFixed(2),
+          performance3y: +Number(
+            getTrailingAnnualizedReturnFromSeries(weekly, 36, {
+              initialInvestment,
+              monthlyContribution,
+            }) || 0
+          ).toFixed(2),
+          performance5y: +Number(
+            getTrailingAnnualizedReturnFromSeries(weekly, 60, {
+              initialInvestment,
+              monthlyContribution,
+            }) || 0
+          ).toFixed(2),
         };
       }
 
@@ -3444,7 +3498,12 @@
         });
       }
 
+      function buildMonthlyContributionSchedule(dates) {
+        return dates.slice(1).map((ds, index) => ds.substring(0, 7) !== dates[index].substring(0, 7));
+      }
+
       const TIMELINE = buildWeeklyTimeline();
+      const WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE = buildMonthlyContributionSchedule(WEEKLY_DATES);
       const SLEEVE_SERIES = [
         { key: "bonds", label: "Úroková složka", color: "#1e5fb8" },
         { key: "stocks", label: "Akciová složka", color: "#16a34a" },
@@ -3457,7 +3516,7 @@
         const values = [initialInvestment];
         let value = initialInvestment;
         for (let i = 0; i < returns.length; i++) {
-          if (i > 0 && WEEKLY_DATES[i].substring(0, 7) !== WEEKLY_DATES[i - 1].substring(0, 7)) {
+          if (WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i]) {
             value += monthlyContribution;
           }
           value = value * (1 + returns[i] / 100);
@@ -3537,9 +3596,7 @@
         });
 
         for (let i = 0; i < weekly.length; i++) {
-          const weekDate = WEEKLY_DATES[i + 1];
-          const prevWeekDate = WEEKLY_DATES[i];
-          const isNewMonth = weekDate.substring(0, 7) !== prevWeekDate.substring(0, 7);
+          const isNewMonth = WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i];
           if (isNewMonth) {
             portfolioValue += normalizedContribution;
             inflationValue += normalizedContribution;
@@ -5577,7 +5634,7 @@
       }
 
       function PresetPortfolios({ activeMode = "EP" }) {
-        const { currency, initialInvestment } = useInvestment();
+        const { currency, initialInvestment, monthlyContribution } = useInvestment();
         const [selectedId, setSelectedId] = useState(null);
         const [detailFunds, setDetailFunds] = useState([]);
         const presetPortfolios = useMemo(
@@ -5617,11 +5674,19 @@
           const out = {};
           presetPortfolios.forEach((p) => {
             const funds = getTemplateFundsForCurrency(p, currency);
-            const portPerf = computePortfolioPerf(funds, currency);
-            out[p.id] = { ...computeStats(portfolioAllocations[p.id], initialInvestment, funds, currency), ...portPerf };
+            const portPerf = computePortfolioPerf(
+              funds,
+              currency,
+              initialInvestment,
+              monthlyContribution
+            );
+            out[p.id] = {
+              ...computeStats(portfolioAllocations[p.id], initialInvestment, funds, currency),
+              ...portPerf,
+            };
           });
           return out;
-        }, [presetPortfolios, initialInvestment, currency, portfolioAllocations]);
+        }, [presetPortfolios, initialInvestment, monthlyContribution, currency, portfolioAllocations]);
         const selected = presetPortfolios.find((p) => p.id === selectedId) || null;
         const activePortfolio = selected || presetPortfolios[0];
         useEffect(() => {
@@ -5784,9 +5849,14 @@
           }, { bonds: 0, stocks: 0, alternatives: 0 });
         }, [funds]);
         const customStats = useMemo(() => {
-          const portPerf = computePortfolioPerf(funds, currency);
+          const portPerf = computePortfolioPerf(
+            funds,
+            currency,
+            initialInvestment,
+            monthlyContribution
+          );
           return { ...computeStats(detailAllocation, initialInvestment, funds, currency), ...portPerf };
-        }, [detailAllocation, initialInvestment, funds, currency]);
+        }, [detailAllocation, initialInvestment, monthlyContribution, funds, currency]);
         const customBaseStrategyId = useMemo(() => {
           return activeTemplate !== "custom" ? activeTemplate : null;
         }, [activeTemplate]);
@@ -6506,7 +6576,13 @@
         const allFunds = useMemo(() => {
           const catalogFunds = activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
             const isin = fundIsin || isinFor(name);
-            const perf = computeFundHistoricalPerf({ name, isin, currency });
+            const perf = computeFundHistoricalPerf({
+              name,
+              isin,
+              currency,
+              initialInvestment,
+              monthlyContribution,
+            });
             const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
             return {
               id: `${name}::${isin || currency}`,
@@ -6531,7 +6607,13 @@
             ...MMA_SIMULATED_MIXES.map((mix) => {
               const hasRealHistory = Boolean(getFundReturnSeriesByIsin(mix.isin));
               const perf = hasRealHistory
-                ? computeFundHistoricalPerf({ name: mix.name, isin: mix.isin, currency })
+                ? computeFundHistoricalPerf({
+                    name: mix.name,
+                    isin: mix.isin,
+                    currency,
+                    initialInvestment,
+                    monthlyContribution,
+                  })
                 : { p1y: null, p3y: null, p5y: null };
               return {
                 ...mix,
@@ -6544,7 +6626,7 @@
               };
             }),
           ];
-        }, [activeCatalogFunds, activeIsins, currency, activeMode]);
+        }, [activeCatalogFunds, activeIsins, currency, activeMode, initialInvestment, monthlyContribution]);
 
         const categories = useMemo(() => {
           const cats = new Set(allFunds.map((f) => f.mainCategory));
