@@ -2986,6 +2986,49 @@
         return null;
       }
 
+      function getTrailingAnnualizedReturnFromSeries(returns, months) {
+        if (!Array.isArray(returns) || !returns.length) return null;
+        const normalizedReturns = returns.map((value) => Number(value) || 0);
+        const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
+        if (firstActiveIndex < 0 || !TIMELINE.length) return 0;
+        const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
+        const values = compoundSeries(1, normalizedReturns);
+        const lastIndex = Math.min(values.length - 1, TIMELINE.length - 1);
+        if (lastIndex <= firstUsableIndex) return 0;
+        const availableMonths = TIMELINE[lastIndex].monthsSinceStart - TIMELINE[firstUsableIndex].monthsSinceStart;
+        if (availableMonths < months) return 0;
+        const targetMonths = TIMELINE[lastIndex].monthsSinceStart - months;
+        let startIndex = firstUsableIndex;
+        for (let index = lastIndex; index >= firstUsableIndex; index -= 1) {
+          if (TIMELINE[index].monthsSinceStart <= targetMonths) {
+            startIndex = index;
+            break;
+          }
+        }
+        return annualisedReturn(values[startIndex], values[lastIndex], months);
+      }
+
+      function getFallbackFundPerf(fundName, currency = "CZK") {
+        const name = (fundName || "").trim();
+        const rawPerf = (FUND_PERF_DATA[currency] || {})[name] || null;
+        const inceptionKey = `${name}:${currency}`;
+        const isListedInception = Object.prototype.hasOwnProperty.call(FUND_INCEPTION, inceptionKey);
+        const months = monthsAvailable(isListedInception ? FUND_INCEPTION[inceptionKey] : null);
+        return getAdjustedFundPerf(rawPerf, months);
+      }
+
+      function computeFundHistoricalPerf({ name = "", isin = "", currency = "CZK" } = {}) {
+        const series = getFundReturnSeriesByIsin(isin) || getFundReturnSeries(name, currency);
+        if (!series) {
+          return getFallbackFundPerf(name, currency);
+        }
+        return {
+          p1y: +Number(getTrailingAnnualizedReturnFromSeries(series, 12) || 0).toFixed(2),
+          p3y: +Number(getTrailingAnnualizedReturnFromSeries(series, 36) || 0).toFixed(2),
+          p5y: +Number(getTrailingAnnualizedReturnFromSeries(series, 60) || 0).toFixed(2),
+        };
+      }
+
       function fundsBasedAllocation(funds, fallbackAllocation, currency = "CZK") {
         if (!funds || !funds.length) return fallbackAllocation;
         const alloc = {};
@@ -3203,41 +3246,24 @@
         return { p1y, p3y, p5y };
       }
 
-      // Computes portfolio-level performance (1Y/3Y/5Y p.a.) from actual fund data.
-      // Funds with no document data and not in FUND_INCEPTION are excluded from
-      // the weighted average (rather than counted as 0) to avoid distortion.
-      // Young funds (in FUND_INCEPTION) are always included with 0-padded adjustment.
       function computePortfolioPerf(funds, currency) {
         if (!funds || !funds.length) {
           return { performance1y: 0, performance3y: 0, performance5y: 0 };
         }
-        let wp1y = 0, tw1y = 0;
-        let wp3y = 0, tw3y = 0;
-        let wp5y = 0, tw5y = 0;
-
-        funds.forEach((fund) => {
-          const w = Number(fund.weight) || 0;
-          if (w <= 0) return;
-          const name = (fund.name || "").trim();
-          const rawPerf = (FUND_PERF_DATA[currency] || {})[name] || null;
-          const inceptionKey = `${name}:${currency}`;
-          const isListedInception = Object.prototype.hasOwnProperty.call(FUND_INCEPTION, inceptionKey);
-          const months = monthsAvailable(isListedInception ? FUND_INCEPTION[inceptionKey] : null);
-          const hasAnyData = rawPerf && (rawPerf.p1y !== null || rawPerf.p3y !== null || rawPerf.p5y !== null);
-
-          // Exclude funds with no data at all that aren't explicitly listed
-          if (!hasAnyData && !isListedInception) return;
-
-          const adj = getAdjustedFundPerf(rawPerf, months);
-          wp1y += adj.p1y * w; tw1y += w;
-          wp3y += adj.p3y * w; tw3y += w;
-          wp5y += adj.p5y * w; tw5y += w;
-        });
-
+        const allocation = funds.reduce((acc, fund) => {
+          const bucket = fund.sleeve === "Úroková složka"
+            ? "bonds"
+            : fund.sleeve === "Akciová složka"
+            ? "stocks"
+            : "alternatives";
+          acc[bucket] += Number(fund.weight) || 0;
+          return acc;
+        }, { bonds: 0, stocks: 0, alternatives: 0 });
+        const stats = computeStats(allocation, 100, funds, currency);
         return {
-          performance1y: tw1y > 0 ? wp1y / tw1y : 0,
-          performance3y: tw3y > 0 ? wp3y / tw3y : 0,
-          performance5y: tw5y > 0 ? wp5y / tw5y : 0,
+          performance1y: stats.performance1y || 0,
+          performance3y: stats.performance3y || 0,
+          performance5y: stats.performance5y || 0,
         };
       }
 
@@ -5176,6 +5202,26 @@
         );
       }
 
+      function FundHistoricalPerformanceInline({ perf }) {
+        const items = [
+          { label: "1R", value: perf?.p1y ?? 0 },
+          { label: "3R", value: perf?.p3y ?? 0 },
+          { label: "5L", value: perf?.p5y ?? 0 },
+        ];
+        return (
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px]">
+            {items.map((item) => (
+              <span key={item.label} className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-1.5 py-0.5 text-slate-500">
+                <span>{item.label}</span>
+                <span className={item.value >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                  {(item.value >= 0 ? "+" : "") + Number(item.value || 0).toFixed(2)} %
+                </span>
+              </span>
+            ))}
+          </div>
+        );
+      }
+
       function RiskBadge({ level, label }) {
         const tone =
           level <= 1
@@ -5489,11 +5535,13 @@
                       {items.map((fund, rowIndex) => {
                         const originalIndex = funds.findIndex((f) => f === fund);
                         const isin = isinFor(fund.name);
+                        const historicalPerf = computeFundHistoricalPerf({ name: fund.name, isin, currency });
                         return (
                           <div key={`${fund.name}-${originalIndex}`} className={`grid gap-2 px-3 py-2.5 ${activeMode === "MMA" ? "grid-cols-[minmax(0,1fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(120px,0.75fr)_minmax(88px,0.5fr)_32px] md:grid-cols-[minmax(0,1.7fr)_minmax(170px,0.9fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)_32px]"} ${rowIndex !== items.length - 1 ? 'border-b border-slate-100' : ''}`}>
                             <div className="min-w-0">
                               <div className="truncate text-xs font-semibold ep-text-navy">{fund.name}</div>
                               <div className="mt-0.5 text-[10px] text-slate-500">{isin ? `ISIN ${isin}` : 'ISIN doplníme'}</div>
+                              <FundHistoricalPerformanceInline perf={historicalPerf} />
                               {activeMode === "MMA" && <div className="mt-1 text-[10px] text-slate-400">{renderAmountCell(fund, true)}</div>}
                               {activeMode !== "MMA" && <div className="mt-1 text-[10px] text-slate-400 md:hidden">{renderAmountCell(fund, true)}</div>}
                             </div>
@@ -5973,11 +6021,13 @@
                           {items.map((fund, rowIndex) => {
                             const originalIndex = funds.findIndex((f) => f === fund);
                             const isin = isinFor(fund.name);
+                            const historicalPerf = computeFundHistoricalPerf({ name: fund.name, isin, currency });
                             return (
                               <div key={`${fund.name}-${originalIndex}`} className={`grid grid-cols-[minmax(0,1.5fr)_minmax(120px,0.75fr)_minmax(88px,0.5fr)_32px] gap-2 px-3 py-2.5 md:grid-cols-[minmax(0,1.7fr)_minmax(170px,0.9fr)_minmax(88px,0.5fr)_minmax(120px,0.7fr)_32px] ${rowIndex !== items.length - 1 ? 'border-b border-slate-100' : ''}`}>
                                 <div className="min-w-0">
                                   <div className="truncate text-xs font-semibold ep-text-navy">{fund.name}</div>
                                   <div className="mt-0.5 text-[10px] text-slate-500">{isin ? `ISIN ${isin}` : 'ISIN doplníme'}</div>
+                                  <FundHistoricalPerformanceInline perf={historicalPerf} />
                                   <div className="mt-1 text-[10px] text-slate-400 md:hidden">{renderAmountCell(fund, true)}</div>
                                 </div>
                                 <div className="flex items-center px-1">
@@ -6447,7 +6497,6 @@
           }
         }, [activeMode, currency, setCurrency]);
 
-        const perfData = FUND_PERF_DATA[currency] || {};
         const activeCatalogFunds = (ALL_FUNDS_BY_CURRENCY[currency] || []).filter(
           ({ name }) => activeMode !== "MMA" || isMmaFundName(name)
         );
@@ -6457,8 +6506,8 @@
         // Build flat list of all funds available in Zpětná modelace for the selected currency.
         const allFunds = useMemo(() => {
           const catalogFunds = activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
-            const perf = perfData[name] || {};
             const isin = fundIsin || isinFor(name);
+            const perf = computeFundHistoricalPerf({ name, isin, currency });
             const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
             return {
               id: `${name}::${isin || currency}`,
@@ -6469,9 +6518,9 @@
               category: categoryInfo.categoryLabel,
               mainCategory: categoryInfo.main,
               subCategory: categoryInfo.sub,
-              p1y: perf.p1y ?? null,
-              p3y: perf.p3y ?? null,
-              p5y: perf.p5y ?? null,
+              p1y: perf.p1y ?? 0,
+              p3y: perf.p3y ?? 0,
+              p5y: perf.p5y ?? 0,
               isSimulated: false,
             };
           });
@@ -6482,18 +6531,21 @@
             ...catalogFunds,
             ...MMA_SIMULATED_MIXES.map((mix) => {
               const hasRealHistory = Boolean(getFundReturnSeriesByIsin(mix.isin));
+              const perf = hasRealHistory
+                ? computeFundHistoricalPerf({ name: mix.name, isin: mix.isin, currency })
+                : { p1y: null, p3y: null, p5y: null };
               return {
                 ...mix,
                 currency,
                 category: `${mix.mainCategory} · ${mix.subCategory}`,
                 isSimulated: !hasRealHistory && Boolean(mix.simulationSeriesKey),
-                p1y: hasRealHistory ? mix.p1y ?? null : null,
-                p3y: hasRealHistory ? mix.p3y ?? null : null,
-                p5y: hasRealHistory ? mix.p5y ?? null : null,
+                p1y: perf.p1y,
+                p3y: perf.p3y,
+                p5y: perf.p5y,
               };
             }),
           ];
-        }, [activeCatalogFunds, perfData, activeIsins, currency, activeMode]);
+        }, [activeCatalogFunds, activeIsins, currency, activeMode]);
 
         const categories = useMemo(() => {
           const cats = new Set(allFunds.map((f) => f.mainCategory));
