@@ -4369,7 +4369,7 @@
           { name: "Fidelity Funds - US HIGH YIELD FUND", sleeve: "Úroková složka", isin: "LU0605520377" },
           { name: "Franklin High Yield Fund - A(acc) USD", sleeve: "Úroková složka", isin: "LU0131126228" },
           { name: "Franklin World Perspectives Fund Class A (acc) USD", sleeve: "Akciová složka", isin: "LU0390134368" },
-          { name: "Franklin World Perspectives Fund Class A (acc) USD", sleeve: "Akciová složka", isin: "LU1458427785" },
+          { name: "Franklin World Perspectives Fund Class A2 (acc) USD", sleeve: "Akciová složka", isin: "LU1458427785" },
           { name: "Templeton Emerging Markets Bond Fund", sleeve: "Úroková složka", isin: "LU0478345209" },
           { name: "Templeton Emerging Markets Fund", sleeve: "Akciová složka", isin: "LU0128522744" },
           { name: "Templeton Global Bond Fund", sleeve: "Úroková složka", isin: "LU0252652382" },
@@ -5746,6 +5746,18 @@
           "Alternativní složka": detailAllocation.alternatives || 0,
         }), [detailAllocation]);
 
+        const comparisonStrategies = useMemo(
+          () =>
+            PRESET_PORTFOLIOS.map((portfolio) => ({
+              id: portfolio.id,
+              name: portfolio.name,
+              color: STRATEGY_COLOR_MAP[portfolio.id] || "#334155",
+              allocation: portfolio.allocation,
+              funds: getTemplateFundsForCurrency(portfolio, currency),
+            })),
+          [currency]
+        );
+
         const existingFundNames = new Set(funds.map((fund) => fund.name.trim().toLowerCase()));
         const activeFunds = ALL_FUNDS_BY_CURRENCY[currency] || [];
         const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
@@ -5997,6 +6009,7 @@
                     title="Detail vlastního portfolia"
                     subtitle="Vývoj se počítá z fondové skladby, kterou si průběžně upravuješ."
                     baseStrategyId={customBaseStrategyId}
+                    comparisonStrategies={comparisonStrategies}
                   />
                   <HistoricalPerformanceSidebar stats={customStats} />
                 </div>
