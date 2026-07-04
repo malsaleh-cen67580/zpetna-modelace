@@ -3504,6 +3504,27 @@
 
       const TIMELINE = buildWeeklyTimeline();
       const WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE = buildMonthlyContributionSchedule(WEEKLY_DATES);
+      const CHART_MIN_DATE = new Date(2021, 6, 2);
+      const CHART_MIN_TS = CHART_MIN_DATE.getTime();
+      function toMonthInputValue(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      }
+      function computeLastRealTsBeforeCurrentMonth() {
+        if (!TIMELINE.length) return CHART_MIN_TS;
+        const now = new Date();
+        const currentMonthStartTs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        for (let i = TIMELINE.length - 1; i >= 0; i--) {
+          const ts = TIMELINE[i].date.getTime();
+          if (ts < currentMonthStartTs) return ts;
+        }
+        return TIMELINE[TIMELINE.length - 1].date.getTime();
+      }
+      const CHART_MAX_TS = Math.max(CHART_MIN_TS, computeLastRealTsBeforeCurrentMonth());
+      const CHART_RANGE_MIN_MONTH = toMonthInputValue(new Date(CHART_MIN_TS));
+      const CHART_RANGE_MAX_MONTH = toMonthInputValue(new Date(CHART_MAX_TS));
+      function clampChartRows(rows) {
+        return rows.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= CHART_MAX_TS);
+      }
       const SLEEVE_SERIES = [
         { key: "bonds", label: "Úroková složka", color: "#1e5fb8" },
         { key: "stocks", label: "Akciová složka", color: "#16a34a" },
@@ -4880,12 +4901,8 @@
         const [horizonMonths, setHorizonMonths] = useState(60);
         const [customDateFrom, setCustomDateFrom] = useState("");
         const [customDateTo, setCustomDateTo] = useState("");
-        const TIMELINE_MIN = TIMELINE.length > 0
-          ? `${TIMELINE[0].date.getFullYear()}-${String(TIMELINE[0].date.getMonth() + 1).padStart(2, "0")}`
-          : "2021-01";
-        const TIMELINE_MAX = TIMELINE.length > 0
-          ? `${TIMELINE[TIMELINE.length - 1].date.getFullYear()}-${String(TIMELINE[TIMELINE.length - 1].date.getMonth() + 1).padStart(2, "0")}`
-          : "";
+        const TIMELINE_MIN = CHART_RANGE_MIN_MONTH || "2021-07";
+        const TIMELINE_MAX = CHART_RANGE_MAX_MONTH;
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "1 rok" },
           { label: "2R", months: 24, title: "2 roky" },
@@ -4961,19 +4978,20 @@
         }, [showSimulation, portfolioKey, showInflation, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
         const displayData = useMemo(() => {
+          const boundedData = clampChartRows(data);
           let filtered;
           if (horizonMonths === "custom") {
             const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
             const toTs = customDateTo ? (() => { const d = new Date(customDateTo + "-01"); d.setMonth(d.getMonth() + 1); return d.getTime() - 1; })() : Infinity;
-            filtered = data.filter((row) => row.ts >= fromTs && row.ts <= toTs);
-          } else if (horizonMonths && data.length > 0) {
+            filtered = boundedData.filter((row) => row.ts >= fromTs && row.ts <= toTs);
+          } else if (horizonMonths && boundedData.length > 0) {
             // Weekly data: filter by date range (not slice-by-count)
-            const lastTs = data[data.length - 1].ts;
+            const lastTs = boundedData[boundedData.length - 1].ts;
             const cutoff = new Date(lastTs);
             cutoff.setMonth(cutoff.getMonth() - horizonMonths);
-            filtered = data.filter((row) => row.ts >= cutoff.getTime());
+            filtered = boundedData.filter((row) => row.ts >= cutoff.getTime());
           } else {
-            filtered = data;
+            filtered = boundedData;
           }
           return buildStartAnchoredDisplayData(filtered, activeDataKeys, {
             mode: viewMode,
@@ -6541,14 +6559,8 @@
         const [selectedFunds, setSelectedFunds] = useState([]);
         const [viewMode, setViewMode] = useState("value");
         const [horizonMonths, setHorizonMonths] = useState(60);
-        const TIMELINE_MIN =
-          TIMELINE.length > 0
-            ? `${TIMELINE[0].date.getFullYear()}-${String(TIMELINE[0].date.getMonth() + 1).padStart(2, "0")}`
-            : "";
-        const TIMELINE_MAX =
-          TIMELINE.length > 0
-            ? `${TIMELINE[TIMELINE.length - 1].date.getFullYear()}-${String(TIMELINE[TIMELINE.length - 1].date.getMonth() + 1).padStart(2, "0")}`
-            : "";
+        const TIMELINE_MIN = CHART_RANGE_MIN_MONTH;
+        const TIMELINE_MAX = CHART_RANGE_MAX_MONTH;
         const [customDateFrom, setCustomDateFrom] = useState(TIMELINE_MIN);
         const [customDateTo, setCustomDateTo] = useState(TIMELINE_MAX);
         const minStep = currency === "CZK" ? 50000 : 2000;
@@ -6776,6 +6788,7 @@
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
 
         const displayData = useMemo(() => {
+          const boundedGrowthData = clampChartRows(growthData);
           let filtered;
           if (horizonMonths === "custom") {
             const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
@@ -6786,15 +6799,15 @@
                   return d.getTime() - 1;
                 })()
               : Infinity;
-            filtered = growthData.filter((row) => row.ts >= fromTs && row.ts <= toTs);
-          } else if (horizonMonths && growthData.length > 0) {
+            filtered = boundedGrowthData.filter((row) => row.ts >= fromTs && row.ts <= toTs);
+          } else if (horizonMonths && boundedGrowthData.length > 0) {
             // Filter by date range
-            const lastTs = growthData[growthData.length - 1].ts;
+            const lastTs = boundedGrowthData[boundedGrowthData.length - 1].ts;
             const cutoff = new Date(lastTs);
             cutoff.setMonth(cutoff.getMonth() - horizonMonths);
-            filtered = growthData.filter((row) => row.ts >= cutoff.getTime());
+            filtered = boundedGrowthData.filter((row) => row.ts >= cutoff.getTime());
           } else {
-            filtered = growthData;
+            filtered = boundedGrowthData;
           }
           return buildStartAnchoredDisplayData(filtered, neniDataKeys, {
             mode: viewMode,
