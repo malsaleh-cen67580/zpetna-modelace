@@ -3509,7 +3509,7 @@
       function toMonthInputValue(date) {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       }
-      function computeLastCompletedMonthRealTs() {
+      function computeLastRealTsBeforeCurrentMonth() {
         if (!TIMELINE.length) return CHART_MIN_TS;
         const now = new Date();
         const currentMonthStartTs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -3519,7 +3519,7 @@
         }
         return TIMELINE[TIMELINE.length - 1].date.getTime();
       }
-      const CHART_MAX_TS = Math.max(CHART_MIN_TS, computeLastCompletedMonthRealTs());
+      const CHART_MAX_TS = Math.max(CHART_MIN_TS, computeLastRealTsBeforeCurrentMonth());
       const CHART_RANGE_MIN_MONTH = toMonthInputValue(new Date(CHART_MIN_TS));
       const CHART_RANGE_MAX_MONTH = toMonthInputValue(new Date(CHART_MAX_TS));
       function clampChartRows(rows) {
