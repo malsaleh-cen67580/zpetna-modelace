@@ -2998,10 +2998,19 @@
         return null;
       }
 
+      function getLastTimelineIndexForMaxTs(maxTs, fallbackIndex = TIMELINE.length - 1) {
+        if (!TIMELINE.length) return -1;
+        if (!Number.isFinite(Number(maxTs))) return Math.max(-1, Math.min(fallbackIndex, TIMELINE.length - 1));
+        for (let i = Math.min(fallbackIndex, TIMELINE.length - 1); i >= 0; i -= 1) {
+          if (TIMELINE[i].date.getTime() <= Number(maxTs)) return i;
+        }
+        return -1;
+      }
+
       function getTrailingAnnualizedReturnFromSeries(
         returns,
         months,
-        { initialInvestment = 1, monthlyContribution = 0 } = {}
+        { initialInvestment = 1, monthlyContribution = 0, maxTs = null } = {}
       ) {
         if (!Array.isArray(returns) || !returns.length) return null;
         const normalizedReturns = returns.map((value) => Number(value) || 0);
@@ -3010,7 +3019,9 @@
         const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
         if (firstActiveIndex < 0 || !TIMELINE.length) return 0;
         const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
-        const lastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
+        const uncappedLastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
+        const tsBoundLastIndex = getLastTimelineIndexForMaxTs(maxTs, uncappedLastIndex);
+        const lastIndex = Math.min(uncappedLastIndex, tsBoundLastIndex);
         if (lastIndex <= firstUsableIndex) return 0;
         const availableMonths =
           TIMELINE[lastIndex].monthsSinceStart - TIMELINE[firstUsableIndex].monthsSinceStart;
@@ -3302,6 +3313,7 @@
         if (!funds || !funds.length) {
           return { performance1y: 0, performance3y: 0, performance5y: 0 };
         }
+        const maxTsForComposition = getCommonMaxTsForFunds(funds, currency);
         const allocation = funds.reduce((acc, fund) => {
           const bucket = fund.sleeve === "Úroková složka"
             ? "bonds"
@@ -3317,18 +3329,21 @@
             getTrailingAnnualizedReturnFromSeries(weekly, 12, {
               initialInvestment,
               monthlyContribution,
+              maxTs: maxTsForComposition,
             }) || 0
           ).toFixed(2),
           performance3y: +Number(
             getTrailingAnnualizedReturnFromSeries(weekly, 36, {
               initialInvestment,
               monthlyContribution,
+              maxTs: maxTsForComposition,
             }) || 0
           ).toFixed(2),
           performance5y: +Number(
             getTrailingAnnualizedReturnFromSeries(weekly, 60, {
               initialInvestment,
               monthlyContribution,
+              maxTs: maxTsForComposition,
             }) || 0
           ).toFixed(2),
         };
@@ -3541,18 +3556,21 @@
 
       /**
        * Returns the timestamp of the last data point in `series` (aligned to TIMELINE)
-       * where the absolute return is non-negligible AND the date is before the current
-       * calendar month. Falls back to CHART_MAX_TS when the series has no such value.
+       * after the fund first becomes active (non-zero return appears) and where the
+       * date is before the current calendar month. Falls back to CHART_MAX_TS when
+       * the series is missing and CHART_MIN_TS when the series never becomes active.
        */
       function getLastRealTsForSeries(series) {
         if (!series) return CHART_MAX_TS;
         const now = new Date();
         const currentMonthStartTs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const firstActiveIndex = series.findIndex((value) => Math.abs(Number(value) || 0) > 1e-12);
+        if (firstActiveIndex < 0) return CHART_MIN_TS;
         const maxIdx = Math.min(series.length - 1, TIMELINE.length - 1);
         for (let i = maxIdx; i >= 0; i--) {
           const ts = TIMELINE[i].date.getTime();
           if (ts >= currentMonthStartTs) continue;
-          if (Math.abs(Number(series[i]) || 0) > 1e-12) return ts;
+          if (i >= firstActiveIndex) return ts;
         }
         return CHART_MIN_TS;
       }
@@ -3997,18 +4015,39 @@
         return Math.sqrt(v);
       }
       function computeStats(allocation, initialInvestment, funds = null, currency = "CZK") {
+        const maxTsForComposition =
+          funds && funds.length ? getCommonMaxTsForFunds(funds, currency) : CHART_MAX_TS;
         const effectiveAlloc = funds && funds.length ? fundsBasedAllocation(funds, allocation, currency) : allocation;
         const weekly = weightedPeriodReturns(effectiveAlloc, currency);
-        const values = compoundSeries(initialInvestment, weekly);
+        const lastIndex = Math.min(
+          weekly.length - 1,
+          getLastTimelineIndexForMaxTs(maxTsForComposition, Math.min(weekly.length - 1, TIMELINE.length - 1))
+        );
+        if (lastIndex < 0) {
+          return {
+            cagr: 0,
+            volatility: 0,
+            sharpe: 0,
+            maxDrawdown: 0,
+            totalReturn: 0,
+            performance1y: 0,
+            performance3y: 0,
+            performance5y: 0,
+            finalValue: initialInvestment,
+          };
+        }
+        const boundedWeekly = weekly.slice(0, lastIndex + 1);
+        const values = compoundSeries(initialInvestment, boundedWeekly);
         const finalValue = values[values.length - 1];
         const totalReturn =
           ((finalValue - initialInvestment) / initialInvestment) * 100;
-        const totalMonths = TIMELINE[TIMELINE.length - 1].monthsSinceStart;
+        const totalMonths = TIMELINE[lastIndex].monthsSinceStart;
         const cagr = annualisedReturn(initialInvestment, finalValue, Math.max(1, totalMonths));
-        const volatility = stddev(weekly) * Math.sqrt(52);
-        const meanCash =
-          WEEKLY_HISTORICAL_RETURNS.cash.reduce((a, b) => a + b, 0) /
-          WEEKLY_HISTORICAL_RETURNS.cash.length;
+        const volatility = stddev(boundedWeekly) * Math.sqrt(52);
+        const boundedCash = (WEEKLY_HISTORICAL_RETURNS.cash || []).slice(0, lastIndex + 1);
+        const meanCash = boundedCash.length
+          ? boundedCash.reduce((a, b) => a + b, 0) / boundedCash.length
+          : 0;
         const riskFreeAnnual = meanCash * 52;
         const sharpe =
           volatility > 0 ? (cagr - riskFreeAnnual) / volatility : 0;
@@ -4019,12 +4058,12 @@
           const dd = (v - peak) / peak;
           if (dd < maxDD) maxDD = dd;
         }
-        const lastMonths = TIMELINE[TIMELINE.length - 1].monthsSinceStart;
+        const lastMonths = TIMELINE[lastIndex].monthsSinceStart;
         const perf = (n) => {
           const targetMonths = lastMonths - n;
           if (targetMonths < 0) return 0;
           let idx = 0;
-          for (let j = TIMELINE.length - 1; j >= 0; j--) {
+          for (let j = lastIndex; j >= 0; j--) {
             if (TIMELINE[j].monthsSinceStart <= targetMonths) { idx = j; break; }
           }
           return annualisedReturn(values[idx], values[values.length - 1], n);
@@ -5007,6 +5046,10 @@
           if (showSleeves && canSplitSleeves) setViewMode("percent");
         }, [showSleeves, canSplitSleeves]);
         const rawData = useMemo(() => buildPerformanceSeries(allocation, initialInvestment, effectiveMonthlyContribution, funds, currency), [allocation, funds, initialInvestment, effectiveMonthlyContribution, currency]);
+        const boundedRawData = useMemo(
+          () => rawData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs),
+          [rawData, commonMaxTs]
+        );
         const allComparisonSeriesMap = useMemo(() => {
           const entries = comparisonStrategies.map((strategy) => [
             strategy.id,
@@ -5092,7 +5135,7 @@
           [displayData, activeDataKeys, viewMode, initialInvestment, referenceValue]
         );
         const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
-        const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
+        const lastRow = boundedRawData.length ? boundedRawData[boundedRawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
         const recurringContributed = lastRow ? lastRow.recurringContributed : 0;
         const absoluteGain = lastRow ? lastRow.portfolio - totalContributed : 0;
