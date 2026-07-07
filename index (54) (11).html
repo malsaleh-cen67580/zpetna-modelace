@@ -2998,10 +2998,19 @@
         return null;
       }
 
+      function getLastTimelineIndexForMaxTs(maxTs, fallbackIndex = TIMELINE.length - 1) {
+        if (!TIMELINE.length) return -1;
+        if (!Number.isFinite(Number(maxTs))) return Math.max(-1, Math.min(fallbackIndex, TIMELINE.length - 1));
+        for (let i = Math.min(fallbackIndex, TIMELINE.length - 1); i >= 0; i -= 1) {
+          if (TIMELINE[i].date.getTime() <= Number(maxTs)) return i;
+        }
+        return -1;
+      }
+
       function getTrailingAnnualizedReturnFromSeries(
         returns,
         months,
-        { initialInvestment = 1, monthlyContribution = 0 } = {}
+        { initialInvestment = 1, monthlyContribution = 0, maxTs = null } = {}
       ) {
         if (!Array.isArray(returns) || !returns.length) return null;
         const normalizedReturns = returns.map((value) => Number(value) || 0);
@@ -3010,7 +3019,9 @@
         const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
         if (firstActiveIndex < 0 || !TIMELINE.length) return 0;
         const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
-        const lastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
+        const uncappedLastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
+        const tsBoundLastIndex = getLastTimelineIndexForMaxTs(maxTs, uncappedLastIndex);
+        const lastIndex = Math.min(uncappedLastIndex, tsBoundLastIndex);
         if (lastIndex <= firstUsableIndex) return 0;
         const availableMonths =
           TIMELINE[lastIndex].monthsSinceStart - TIMELINE[firstUsableIndex].monthsSinceStart;
@@ -3243,8 +3254,9 @@
         "BNP Health Care Innovators:CZK":                      new Date(2024,  0, 12), // 12.01.2024
       };
 
-      // Reference date matching the CZK performance document
-      const PERF_REFERENCE_DATE = new Date(2026, 5, 23); // June 23, 2026
+      // Reference date: computed dynamically from real fund data (see definition after CHART_MAX_TS below).
+      // Declaration is hoisted here so monthsAvailable() can reference it; value is assigned later.
+      let PERF_REFERENCE_DATE;
 
       // Returns months between inceptionDate and PERF_REFERENCE_DATE.
       // Returns 999 (effectively infinite) when no inception date is provided.
@@ -3301,6 +3313,7 @@
         if (!funds || !funds.length) {
           return { performance1y: 0, performance3y: 0, performance5y: 0 };
         }
+        const maxTsForComposition = getCommonMaxTsForFunds(funds, currency);
         const allocation = funds.reduce((acc, fund) => {
           const bucket = fund.sleeve === "Úroková složka"
             ? "bonds"
@@ -3316,18 +3329,21 @@
             getTrailingAnnualizedReturnFromSeries(weekly, 12, {
               initialInvestment,
               monthlyContribution,
+              maxTs: maxTsForComposition,
             }) || 0
           ).toFixed(2),
           performance3y: +Number(
             getTrailingAnnualizedReturnFromSeries(weekly, 36, {
               initialInvestment,
               monthlyContribution,
+              maxTs: maxTsForComposition,
             }) || 0
           ).toFixed(2),
           performance5y: +Number(
             getTrailingAnnualizedReturnFromSeries(weekly, 60, {
               initialInvestment,
               monthlyContribution,
+              maxTs: maxTsForComposition,
             }) || 0
           ).toFixed(2),
         };
@@ -3537,6 +3553,50 @@
       function clampChartRows(rows) {
         return rows.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= CHART_MAX_TS);
       }
+
+      /**
+       * Returns the timestamp of the last data point in `series` (aligned to TIMELINE)
+       * after the fund first becomes active (non-zero return appears) and where the
+       * date is before the current calendar month. Falls back to CHART_MAX_TS when
+       * the series is missing and CHART_MIN_TS when the series never becomes active.
+       */
+      function getLastRealTsForSeries(series) {
+        if (!series) return CHART_MAX_TS;
+        const now = new Date();
+        const currentMonthStartTs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const firstActiveIndex = series.findIndex((value) => Math.abs(Number(value) || 0) > 1e-12);
+        if (firstActiveIndex < 0) return CHART_MIN_TS;
+        const maxIdx = Math.min(series.length - 1, TIMELINE.length - 1);
+        for (let i = maxIdx; i >= 0; i--) {
+          const ts = TIMELINE[i].date.getTime();
+          if (ts >= currentMonthStartTs) continue;
+          if (i >= firstActiveIndex) return ts;
+        }
+        return CHART_MIN_TS;
+      }
+
+      /**
+       * Returns the last common known timestamp for a list of funds: the minimum
+       * of each fund's individual last real data date (before the current month).
+       * When no fund series are found, falls back to CHART_MAX_TS.
+       */
+      function getCommonMaxTsForFunds(fundsList, currency) {
+        if (!fundsList || !fundsList.length) return CHART_MAX_TS;
+        let commonTs = CHART_MAX_TS;
+        fundsList.forEach(function(fund) {
+          const isin = String(fund.isin || (KNOWN_ISINS_BY_CURRENCY?.[currency]?.[fund.name]) || '').trim();
+          const series = (isin && FUND_WEEKLY_RETURNS_BY_ISIN[isin]) || getFundReturnSeries(fund.name, currency);
+          if (series) {
+            commonTs = Math.min(commonTs, getLastRealTsForSeries(series));
+          }
+        });
+        return Math.max(CHART_MIN_TS, commonTs);
+      }
+
+      // Dynamic reference date: the last date with real fund data before the current month.
+      // Replaces the previously hardcoded value of 23.6.2026.
+      PERF_REFERENCE_DATE = new Date(CHART_MAX_TS);
+
       const SLEEVE_SERIES = [
         { key: "bonds", label: "Úroková složka", color: "#1e5fb8" },
         { key: "stocks", label: "Akciová složka", color: "#16a34a" },
@@ -3955,18 +4015,39 @@
         return Math.sqrt(v);
       }
       function computeStats(allocation, initialInvestment, funds = null, currency = "CZK") {
+        const maxTsForComposition =
+          funds && funds.length ? getCommonMaxTsForFunds(funds, currency) : CHART_MAX_TS;
         const effectiveAlloc = funds && funds.length ? fundsBasedAllocation(funds, allocation, currency) : allocation;
         const weekly = weightedPeriodReturns(effectiveAlloc, currency);
-        const values = compoundSeries(initialInvestment, weekly);
+        const lastIndex = Math.min(
+          weekly.length - 1,
+          getLastTimelineIndexForMaxTs(maxTsForComposition, Math.min(weekly.length - 1, TIMELINE.length - 1))
+        );
+        if (lastIndex < 0) {
+          return {
+            cagr: 0,
+            volatility: 0,
+            sharpe: 0,
+            maxDrawdown: 0,
+            totalReturn: 0,
+            performance1y: 0,
+            performance3y: 0,
+            performance5y: 0,
+            finalValue: initialInvestment,
+          };
+        }
+        const boundedWeekly = weekly.slice(0, lastIndex + 1);
+        const values = compoundSeries(initialInvestment, boundedWeekly);
         const finalValue = values[values.length - 1];
         const totalReturn =
           ((finalValue - initialInvestment) / initialInvestment) * 100;
-        const totalMonths = TIMELINE[TIMELINE.length - 1].monthsSinceStart;
+        const totalMonths = TIMELINE[lastIndex].monthsSinceStart;
         const cagr = annualisedReturn(initialInvestment, finalValue, Math.max(1, totalMonths));
-        const volatility = stddev(weekly) * Math.sqrt(52);
-        const meanCash =
-          WEEKLY_HISTORICAL_RETURNS.cash.reduce((a, b) => a + b, 0) /
-          WEEKLY_HISTORICAL_RETURNS.cash.length;
+        const volatility = stddev(boundedWeekly) * Math.sqrt(52);
+        const boundedCash = (WEEKLY_HISTORICAL_RETURNS.cash || []).slice(0, lastIndex + 1);
+        const meanCash = boundedCash.length
+          ? boundedCash.reduce((a, b) => a + b, 0) / boundedCash.length
+          : 0;
         const riskFreeAnnual = meanCash * 52;
         const sharpe =
           volatility > 0 ? (cagr - riskFreeAnnual) / volatility : 0;
@@ -3977,12 +4058,12 @@
           const dd = (v - peak) / peak;
           if (dd < maxDD) maxDD = dd;
         }
-        const lastMonths = TIMELINE[TIMELINE.length - 1].monthsSinceStart;
+        const lastMonths = TIMELINE[lastIndex].monthsSinceStart;
         const perf = (n) => {
           const targetMonths = lastMonths - n;
           if (targetMonths < 0) return 0;
           let idx = 0;
-          for (let j = TIMELINE.length - 1; j >= 0; j--) {
+          for (let j = lastIndex; j >= 0; j--) {
             if (TIMELINE[j].monthsSinceStart <= targetMonths) { idx = j; break; }
           }
           return annualisedReturn(values[idx], values[values.length - 1], n);
@@ -4922,7 +5003,9 @@
         const [customDateFrom, setCustomDateFrom] = useState("");
         const [customDateTo, setCustomDateTo] = useState("");
         const TIMELINE_MIN = CHART_RANGE_MIN_MONTH || "2021-07";
-        const TIMELINE_MAX = CHART_RANGE_MAX_MONTH;
+        // Common last known date for all funds in this composition (before current month).
+        const commonMaxTs = useMemo(() => getCommonMaxTsForFunds(funds, currency), [funds, currency]);
+        const TIMELINE_MAX = toMonthInputValue(new Date(commonMaxTs));
         const HORIZON_OPTIONS = [
           { label: "1R", months: 12, title: "1 rok" },
           { label: "2R", months: 24, title: "2 roky" },
@@ -4963,6 +5046,10 @@
           if (showSleeves && canSplitSleeves) setViewMode("percent");
         }, [showSleeves, canSplitSleeves]);
         const rawData = useMemo(() => buildPerformanceSeries(allocation, initialInvestment, effectiveMonthlyContribution, funds, currency), [allocation, funds, initialInvestment, effectiveMonthlyContribution, currency]);
+        const boundedRawData = useMemo(
+          () => rawData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs),
+          [rawData, commonMaxTs]
+        );
         const allComparisonSeriesMap = useMemo(() => {
           const entries = comparisonStrategies.map((strategy) => [
             strategy.id,
@@ -4998,7 +5085,8 @@
         }, [showSimulation, portfolioKey, showInflation, inflationKey, showSleeves, canSplitSleeves, activeSleeveSeries, activeComparisonStrategies]);
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
         const displayData = useMemo(() => {
-          const boundedData = clampChartRows(data);
+          // Clamp to the common last known date for all funds in this composition.
+          const boundedData = data.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs);
           let filtered;
           if (horizonMonths === "custom") {
             const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
@@ -5023,7 +5111,7 @@
               referenceValue,
             },
           });
-        }, [data, horizonMonths, customDateFrom, customDateTo, activeDataKeys, viewMode, initialInvestment, referenceValue]);
+        }, [data, commonMaxTs, horizonMonths, customDateFrom, customDateTo, activeDataKeys, viewMode, initialInvestment, referenceValue]);
         // Show one tick per quarter (approximately every 63 trading days)
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -5047,7 +5135,7 @@
           [displayData, activeDataKeys, viewMode, initialInvestment, referenceValue]
         );
         const finalValue = displayData.length ? displayData[displayData.length - 1][portfolioKey] : initialInvestment;
-        const lastRow = rawData.length ? rawData[rawData.length - 1] : null;
+        const lastRow = boundedRawData.length ? boundedRawData[boundedRawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
         const recurringContributed = lastRow ? lastRow.recurringContributed : 0;
         const absoluteGain = lastRow ? lastRow.portfolio - totalContributed : 0;
@@ -6580,9 +6668,8 @@
         const [viewMode, setViewMode] = useState("value");
         const [horizonMonths, setHorizonMonths] = useState(60);
         const TIMELINE_MIN = CHART_RANGE_MIN_MONTH;
-        const TIMELINE_MAX = CHART_RANGE_MAX_MONTH;
         const [customDateFrom, setCustomDateFrom] = useState(TIMELINE_MIN);
-        const [customDateTo, setCustomDateTo] = useState(TIMELINE_MAX);
+        const [customDateTo, setCustomDateTo] = useState(CHART_RANGE_MAX_MONTH);
         const minStep = currency === "CZK" ? 50000 : 2000;
         const monthlyStep = currency === "CZK" ? 5000 : 200;
         const currencyOptions = activeMode === "MMA" ? ["CZK"] : ["CZK", "EUR", "USD"];
@@ -6729,6 +6816,15 @@
           [allFunds, selectedFunds]
         );
 
+        // Common last known date for all selected comparison funds (before current month).
+        const commonMaxTs = useMemo(() => getCommonMaxTsForFunds(compFunds, currency), [compFunds, currency]);
+        const TIMELINE_MAX = toMonthInputValue(new Date(commonMaxTs));
+        // When the common max date decreases (e.g. a fund with less history is selected),
+        // clamp customDateTo so the date picker stays within valid range.
+        useEffect(() => {
+          if (customDateTo > TIMELINE_MAX) setCustomDateTo(TIMELINE_MAX);
+        }, [TIMELINE_MAX]);
+
         const formatMoney = useMemo(() => {
           const locale = currency === "CZK" ? "cs-CZ" : currency === "EUR" ? "de-DE" : "en-US";
           return (amount, opts) =>
@@ -6808,7 +6904,8 @@
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
 
         const displayData = useMemo(() => {
-          const boundedGrowthData = clampChartRows(growthData);
+          // Clamp to the common last known date for all selected funds in this comparison.
+          const boundedGrowthData = growthData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs);
           let filtered;
           if (horizonMonths === "custom") {
             const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
@@ -6836,7 +6933,7 @@
               referenceValue,
             },
           });
-        }, [growthData, horizonMonths, customDateFrom, customDateTo, neniDataKeys, viewMode, referenceValue]);
+        }, [growthData, commonMaxTs, horizonMonths, customDateFrom, customDateTo, neniDataKeys, viewMode, referenceValue]);
 
         const xTicks = useMemo(() => {
           const seen = new Set();
