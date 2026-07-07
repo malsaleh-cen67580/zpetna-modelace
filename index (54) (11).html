@@ -3000,7 +3000,7 @@
 
       function getLastTimelineIndexForMaxTs(maxTs, fallbackIndex = TIMELINE.length - 1) {
         if (!TIMELINE.length) return -1;
-        if (!Number.isFinite(Number(maxTs))) return Math.max(-1, Math.min(fallbackIndex, TIMELINE.length - 1));
+        if (maxTs === null || maxTs === undefined || !Number.isFinite(Number(maxTs))) return Math.max(-1, Math.min(fallbackIndex, TIMELINE.length - 1));
         for (let i = Math.min(fallbackIndex, TIMELINE.length - 1); i >= 0; i -= 1) {
           if (TIMELINE[i].date.getTime() <= Number(maxTs)) return i;
         }
@@ -6426,6 +6426,7 @@
         AT0000A00GK1: { main: "Akciové", sub: "Akcie rozvíjející se trhy" },
         AT0000A03N37: { main: "Akciové", sub: "Udržitelnost" },
         AT0000A044X2: { main: "Akciové", sub: "Udržitelnost" },
+        AT0000A07YK9: { main: "Nemovitosti a alternativy", sub: "Reality" },
         AT0000A0A1P0: { main: "Akciové", sub: "Severní Amerika" },
         AT0000A0C8W9: { main: "Dluhopisové", sub: "Peněžní trh" },
         AT0000A0XYP0: { main: "Akciové", sub: "Sektory" },
@@ -6685,8 +6686,12 @@
           }
         }, [activeMode, currency, setCurrency]);
 
-        const activeCatalogFunds = (ALL_FUNDS_BY_CURRENCY[currency] || []).filter(
-          ({ name }) => activeMode !== "MMA" || isMmaFundName(name)
+        const activeCatalogFunds = useMemo(
+          () =>
+            (ALL_FUNDS_BY_CURRENCY[currency] || []).filter(
+              ({ name }) => activeMode !== "MMA" || isMmaFundName(name)
+            ),
+          [currency, activeMode]
         );
         const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
         const isinFor = (fundName) => activeIsins[fundName] || "";
@@ -6797,7 +6802,10 @@
         }, [allFunds, category, subCategory, sleeveFilter, search, currency]);
 
         useEffect(() => {
-          setSelectedFunds((prev) => prev.filter((fundId) => allFunds.some((fund) => fund.id === fundId)));
+          setSelectedFunds((prev) => {
+            const next = prev.filter((fundId) => allFunds.some((fund) => fund.id === fundId));
+            return next.length === prev.length ? prev : next;
+          });
         }, [allFunds]);
 
         const toggleFund = (fundId) => {
