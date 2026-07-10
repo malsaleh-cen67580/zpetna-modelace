@@ -3017,7 +3017,8 @@
         const normalizedInitialInvestment = Math.max(0, Number(initialInvestment) || 0);
         const normalizedMonthlyContribution = Math.max(0, Number(monthlyContribution) || 0);
         const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
-        if (firstActiveIndex < 0 || !TIMELINE.length) return 0;
+        if (firstActiveIndex < 0) return null;
+        if (!TIMELINE.length) return null;
         const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
         const uncappedLastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
         const tsBoundLastIndex = getLastTimelineIndexForMaxTs(maxTs, uncappedLastIndex);
@@ -3069,25 +3070,13 @@
         if (!series) {
           return getFallbackFundPerf(name, currency);
         }
+        const raw1y = getTrailingAnnualizedReturnFromSeries(series, 12, { initialInvestment, monthlyContribution });
+        const raw3y = getTrailingAnnualizedReturnFromSeries(series, 36, { initialInvestment, monthlyContribution });
+        const raw5y = getTrailingAnnualizedReturnFromSeries(series, 60, { initialInvestment, monthlyContribution });
         return {
-          p1y: +Number(
-            getTrailingAnnualizedReturnFromSeries(series, 12, {
-              initialInvestment,
-              monthlyContribution,
-            }) || 0
-          ).toFixed(2),
-          p3y: +Number(
-            getTrailingAnnualizedReturnFromSeries(series, 36, {
-              initialInvestment,
-              monthlyContribution,
-            }) || 0
-          ).toFixed(2),
-          p5y: +Number(
-            getTrailingAnnualizedReturnFromSeries(series, 60, {
-              initialInvestment,
-              monthlyContribution,
-            }) || 0
-          ).toFixed(2),
+          p1y: raw1y !== null ? +Number(raw1y).toFixed(2) : null,
+          p3y: raw3y !== null ? +Number(raw3y).toFixed(2) : null,
+          p5y: raw5y !== null ? +Number(raw5y).toFixed(2) : null,
         };
       }
 
@@ -3663,6 +3652,41 @@
         const contributed = [];
         const sleeveValues = Object.fromEntries(SLEEVE_SERIES.map(({ key }) => [key, []]));
         const sleeveContributed = Object.fromEntries(SLEEVE_SERIES.map(({ key }) => [key, []]));
+
+        // Compute per-sleeve weighted return series when fund-level data is available.
+        // This ensures "Rozdělit do složek" reflects actual fund returns rather than generic proxies.
+        const sleeveWeeklyReturns = {};
+        if (funds && funds.length) {
+          SLEEVE_SERIES.forEach(({ key }) => {
+            const assetClass = key; // "bonds", "stocks", "alternatives"
+            const sleeveFunds = funds.filter((f) => {
+              const bucket = f.sleeve === "Úroková složka" ? "bonds" : f.sleeve === "Akciová složka" ? "stocks" : "alternatives";
+              return bucket === assetClass;
+            });
+            if (!sleeveFunds.length) return;
+            const sleeveTotal = sleeveFunds.reduce((sum, f) => sum + (Number(f.weight) || 0), 0);
+            if (sleeveTotal <= 0) return;
+            // Build a normalized allocation for this sleeve's funds (weights sum to 100)
+            const sleeveAlloc = {};
+            sleeveFunds.forEach((fund) => {
+              const w = (Number(fund.weight) || 0) / sleeveTotal * 100;
+              if (w <= 0) return;
+              const isin = String(fund?.isin || KNOWN_ISINS_BY_CURRENCY?.[currency]?.[fund.name] || "").trim();
+              if (isin && FUND_WEEKLY_RETURNS_BY_ISIN[isin]) {
+                sleeveAlloc[`ISIN::${isin}`] = (sleeveAlloc[`ISIN::${isin}`] || 0) + w;
+              } else if (getFundReturnSeries(fund.name, currency, isin)) {
+                sleeveAlloc[fund.name] = (sleeveAlloc[fund.name] || 0) + w;
+              } else {
+                const simKey = `SIM::${simulationProfileForFund(fund.name, currency, fund.sleeve, isin)}`;
+                sleeveAlloc[simKey] = (sleeveAlloc[simKey] || 0) + w;
+              }
+            });
+            if (Object.keys(sleeveAlloc).length > 0) {
+              sleeveWeeklyReturns[key] = weightedPeriodReturns(sleeveAlloc, currency);
+            }
+          });
+        }
+
         const sleeveState = Object.fromEntries(
           SLEEVE_SERIES.map(({ key }) => {
             return [
@@ -3708,7 +3732,7 @@
               sleeve.contributed += sleeve.monthlyContribution;
             }
             const sleeveWeight = (allocation[key] || 0) / 100;
-            const assetWeeklyReturn = WEEKLY_HISTORICAL_RETURNS[key]?.[i] || weekly[i] || 0;
+            const assetWeeklyReturn = (sleeveWeeklyReturns[key]?.[i] ?? WEEKLY_HISTORICAL_RETURNS[key]?.[i] ?? weekly[i]) || 0;
             sleeve.value = sleeve.value * (1 + assetWeeklyReturn / 100);
             sleeveValues[key].push(sleeve.value * sleeveWeight);
             sleeveContributed[key].push(sleeve.contributed * sleeveWeight);
@@ -5160,7 +5184,7 @@
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-right shrink-0">
                   <div className="text-[10px] uppercase tracking-widest text-slate-500">{viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota"}</div>
                   <div className="font-semibold ep-text-navy md:text-lg">{viewMode === "percent" ? `${Number(finalValue) >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %` : formatMoney(finalValue)}</div>
-                  <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>
+                  {viewMode !== "percent" && <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>}
                 </div>
                 <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
                   {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((option) => {
@@ -5240,14 +5264,23 @@
                 <div className="text-[10px] uppercase tracking-widest text-slate-500">Celkem vloženo</div>
                 <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(totalContributed)}</div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[10px] uppercase tracking-widest text-slate-500">Jednorázově vloženo</div>
-                <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(initialInvestment)}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[10px] uppercase tracking-widest text-slate-500">Pravidelně vloženo</div>
-                <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(recurringContributed)}</div>
-              </div>
+              {effectiveMonthlyContribution > 0 ? (
+                <>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest text-slate-500">Jednorázově vloženo</div>
+                    <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(initialInvestment)}</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest text-slate-500">Pravidelně vloženo</div>
+                    <div className="mt-1 text-base font-semibold ep-text-navy">{formatMoney(recurringContributed)}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="invisible" aria-hidden="true" />
+                  <div className="invisible" aria-hidden="true" />
+                </>
+              )}
             </div>
             <div className="mb-3 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
@@ -5827,6 +5860,11 @@
             return acc;
           }, { bonds: 0, stocks: 0, alternatives: 0 });
         }, [detailFunds, activePortfolio]);
+        const detailStats = useMemo(() => {
+          if (!detailFunds || !detailFunds.length) return stats[activePortfolio.id];
+          const portPerf = computePortfolioPerf(detailFunds, currency, initialInvestment, monthlyContribution);
+          return { ...computeStats(detailAllocation, initialInvestment, detailFunds, currency), ...portPerf };
+        }, [detailFunds, detailAllocation, currency, initialInvestment, monthlyContribution, activePortfolio, stats]);
         const openDetail = (portfolio) => {
           setSelectedId((prev) => (prev === portfolio.id ? null : portfolio.id));
           setDetailFunds(getTemplateFundsForCurrency(portfolio, currency));
@@ -5878,7 +5916,7 @@
                   comparisonStrategies={comparisonStrategies}
                   activeMode={activeMode}
                 />
-                <HistoricalPerformanceSidebar stats={stats[activePortfolio.id]} />
+                <HistoricalPerformanceSidebar stats={detailStats} />
               </div>
               {selected ? <PortfolioDetailEditor portfolio={selected} onAllocationChange={setDetailFunds} activeMode={activeMode} /> : null}
             </div>
@@ -6717,9 +6755,9 @@
               category: categoryInfo.categoryLabel,
               mainCategory: categoryInfo.main,
               subCategory: categoryInfo.sub,
-              p1y: perf.p1y ?? 0,
-              p3y: perf.p3y ?? 0,
-              p5y: perf.p5y ?? 0,
+              p1y: perf.p1y ?? null,
+              p3y: perf.p3y ?? null,
+              p5y: perf.p5y ?? null,
               isSimulated: false,
             };
           });
@@ -7311,7 +7349,7 @@
                     </table>
                   </div>
                   <div className="border-t border-slate-100 px-5 py-3 text-[11px] text-slate-400">
-                    Kliknutím na fond ho přidáte do srovnání (max. 8). Výkonnost p.a. = průměrný roční výnos za dané období. V MMA režimu jsou smíšené fondy bez reálné historie označené jako simulace.
+                    Kliknutím na fond ho přidáte do srovnání (max. 8). Výkonnost p.a. = průměrný roční výnos za dané období.
                   </div>
                 </section>
 
@@ -7322,7 +7360,7 @@
                       <div>
                         <h3 className="text-lg font-semibold ep-text-navy">Srovnání vybraných fondů</h3>
                         <p className="text-sm text-slate-500">
-                          Simulovaný vývoj investovaných finančních prostředků na základě historické výkonnosti.
+                          Vývoj investovaných finančních prostředků na základě historické výkonnosti.
                         </p>
                         {compFunds.some((fund) => fund.isSimulated) && (
                           <p className="mt-1 text-xs font-medium text-amber-700">
@@ -7347,9 +7385,10 @@
                         const valueKey = f.id;
                         const finalValue = finalRow ? finalRow[valueKey] : null;
                         return (
-                          <div key={f.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
+                          <div key={f.id} className="relative rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <button type="button" onClick={() => toggleFund(f.id)} className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" aria-label={`Odebrat ${f.name} z porovnání`} title="Odebrat fond z porovnání">×</button>
+                            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500 pr-5">
+                              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
                               <span className="truncate">{f.name}</span>
                             </div>
                             <div className="mt-0.5 text-[10px] text-slate-500">{f.isin ? `ISIN ${f.isin}` : f.isSimulated ? "Simulovaná data" : "ISIN doplníme"}</div>
@@ -7364,24 +7403,6 @@
                           </div>
                         );
                       })}
-                    </div>
-
-                    {/* Legend */}
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {compFunds.map((f, idx) => (
-                        <button
-                          key={f.id}
-                          type="button"
-                          onClick={() => toggleFund(f.id)}
-                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
-                          aria-label={`Odebrat ${f.name} z porovnání`}
-                          title="Odebrat fond z porovnání"
-                        >
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NENI_FUND_COLORS[idx % NENI_FUND_COLORS.length] }} />
-                          <span className="font-medium">{f.name}</span>
-                          <span className="text-slate-400">×</span>
-                        </button>
-                      ))}
                     </div>
 
                     <div className="mb-3 flex flex-col gap-2">
@@ -7526,7 +7547,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Erste Premier — Demo · Výkonnosti vycházejí z historických dat. Nejedná se o investiční doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo · Výkonnosti vycházejí z přibližných historických dat. Nejedná se o investiční doporučení.
               </footer>
             </main>
           </div>
