@@ -2671,13 +2671,7 @@
     ]
   },
   "presetMismatches": {
-    "preset": [
-      {
-        "portfolio": "RŘC1",
-        "currency": "USD",
-        "fund": "BNP Paribas Funds USD Money Market"
-      }
-    ],
+    "preset": [],
     "mma": []
   },
   "lengths": {
@@ -2690,7 +2684,6 @@
       260
     ],
     "weeklyIsinUniqueLengths": [
-      200,
       260
     ],
     "weeklyNameUniqueLengths": [
@@ -2701,12 +2694,7 @@
   "lengthOutliers": {
     "fundDaily": [],
     "weeklyHist": [],
-    "weeklyIsin": [
-      {
-        "isin": "CZ0008476280",
-        "length": 200
-      }
-    ],
+    "weeklyIsin": [],
     "weeklyName": [
       {
         "name": "reico čs long lease",
@@ -2747,8 +2735,7 @@
     "CZ0008472305",
     "CZ0008472321",
     "CZ0008472339",
-    "CZ0008472347",
-    "LU0152980495"
+    "CZ0008472347"
   ],
   "catalogIsinsMissingClassification": []
 }
