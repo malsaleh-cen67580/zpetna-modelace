@@ -3023,10 +3023,10 @@
         const uncappedLastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
         const tsBoundLastIndex = getLastTimelineIndexForMaxTs(maxTs, uncappedLastIndex);
         const lastIndex = Math.min(uncappedLastIndex, tsBoundLastIndex);
-        if (lastIndex <= firstUsableIndex) return 0;
+        if (lastIndex <= firstUsableIndex) return null;
         const availableMonths =
           TIMELINE[lastIndex].monthsSinceStart - TIMELINE[firstUsableIndex].monthsSinceStart;
-        if (availableMonths < months) return 0;
+        if (availableMonths < months) return null;
         const targetMonths = TIMELINE[lastIndex].monthsSinceStart - months;
         let startIndex = firstUsableIndex;
         for (let index = lastIndex; index >= firstUsableIndex; index -= 1) {
@@ -3036,7 +3036,7 @@
           }
         }
         const periodReturns = normalizedReturns.slice(startIndex + 1, lastIndex + 1);
-        if (!periodReturns.length) return 0;
+        if (!periodReturns.length) return null;
         let value = normalizedInitialInvestment;
         let contributed = normalizedInitialInvestment;
         for (let index = 0; index < periodReturns.length; index += 1) {
@@ -3258,49 +3258,25 @@
       }
 
       // Returns adjusted {p1y, p3y, p5y} for a single fund.
-      // For periods before the fund's inception, performance is counted as 0.
+      // For periods before the fund's inception or when the source value is unavailable,
+      // return null so the UI can show a dash instead of a synthetic 0 %.
       // rawPerf: object from FUND_PERF_DATA or null if not available.
       // months:  months the fund has been available up to PERF_REFERENCE_DATE.
       function getAdjustedFundPerf(rawPerf, months) {
-        if (!rawPerf) return { p1y: 0, p3y: 0, p5y: 0 };
+        if (!rawPerf) return { p1y: null, p3y: null, p5y: null };
         const r1 = rawPerf.p1y, r3 = rawPerf.p3y, r5 = rawPerf.p5y;
-
-        // 1Y
-        const p1y = (months >= 12 && r1 !== null) ? r1 : 0;
-
-        // 3Y: use document value; blend or approximate when unavailable
-        let p3y;
-        if (r3 !== null) {
-          p3y = r3;
-        } else if (months >= 36 && r1 !== null) {
-          p3y = r1; // old fund, only 1Y in doc – use as proxy
-        } else if (months >= 12 && r1 !== null) {
-          // 12–35 months: 0% for (36-12) months + 1Y for 12 months
-          p3y = (Math.pow(1 + r1 / 100, 12 / 36) - 1) * 100;
-        } else {
-          p3y = 0;
-        }
-
-        // 5Y: use document value; blend or approximate when unavailable
-        let p5y;
-        if (r5 !== null) {
-          p5y = r5;
-        } else if (months >= 36 && r3 !== null) {
-          // 36–59 months: 0% for (60-36) months + 3Y for 36 months
-          p5y = (Math.pow(1 + r3 / 100, 36 / 60) - 1) * 100;
-        } else if (months >= 12 && r1 !== null) {
-          // 12–35 months: 0% for (60-12) months + 1Y for 12 months
-          p5y = (Math.pow(1 + r1 / 100, 12 / 60) - 1) * 100;
-        } else {
-          p5y = 0;
-        }
-
-        return { p1y, p3y, p5y };
+        const normalizePublishedPerf = (value, minimumMonths) =>
+          Number.isFinite(value) && Math.abs(value) > 1e-12 && months >= minimumMonths ? value : null;
+        return {
+          p1y: normalizePublishedPerf(r1, 12),
+          p3y: normalizePublishedPerf(r3, 36),
+          p5y: normalizePublishedPerf(r5, 60),
+        };
       }
 
       function computePortfolioPerf(funds, currency, initialInvestment = 1, monthlyContribution = 0) {
         if (!funds || !funds.length) {
-          return { performance1y: 0, performance3y: 0, performance5y: 0 };
+          return { performance1y: null, performance3y: null, performance5y: null };
         }
         const maxTsForComposition = getCommonMaxTsForFunds(funds, currency);
         const allocation = funds.reduce((acc, fund) => {
@@ -3314,27 +3290,30 @@
         }, { bonds: 0, stocks: 0, alternatives: 0 });
         const weekly = weightedPeriodReturns(fundsBasedAllocation(funds, allocation, currency), currency);
         return {
-          performance1y: +Number(
+          performance1y: ((rawValue) =>
+            rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 12, {
               initialInvestment,
               monthlyContribution,
               maxTs: maxTsForComposition,
-            }) || 0
-          ).toFixed(2),
-          performance3y: +Number(
+            })
+          ),
+          performance3y: ((rawValue) =>
+            rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 36, {
               initialInvestment,
               monthlyContribution,
               maxTs: maxTsForComposition,
-            }) || 0
-          ).toFixed(2),
-          performance5y: +Number(
+            })
+          ),
+          performance5y: ((rawValue) =>
+            rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 60, {
               initialInvestment,
               monthlyContribution,
               maxTs: maxTsForComposition,
-            }) || 0
-          ).toFixed(2),
+            })
+          ),
         };
       }
 
@@ -4054,9 +4033,9 @@
             sharpe: 0,
             maxDrawdown: 0,
             totalReturn: 0,
-            performance1y: 0,
-            performance3y: 0,
-            performance5y: 0,
+            performance1y: null,
+            performance3y: null,
+            performance5y: null,
             finalValue: initialInvestment,
           };
         }
@@ -4085,7 +4064,7 @@
         const lastMonths = TIMELINE[lastIndex].monthsSinceStart;
         const perf = (n) => {
           const targetMonths = lastMonths - n;
-          if (targetMonths < 0) return 0;
+          if (targetMonths < 0) return null;
           let idx = 0;
           for (let j = lastIndex; j >= 0; j--) {
             if (TIMELINE[j].monthsSinceStart <= targetMonths) { idx = j; break; }
@@ -5040,10 +5019,11 @@
         ];
         const effectiveMonthlyContribution = monthlyContribution;
         const showSimulation = initialInvestment > 0 || effectiveMonthlyContribution > 0;
+        const defaultComparisonIdsKey = Array.isArray(defaultComparisonIds) ? JSON.stringify(defaultComparisonIds) : "[]";
         useEffect(() => {
-          setCompareStrategyIds(defaultComparisonIds || []);
+          setCompareStrategyIds(Array.isArray(defaultComparisonIds) ? [...defaultComparisonIds] : []);
           setShowSleeves(false);
-        }, [baseStrategyId, title, defaultComparisonIds]);
+        }, [baseStrategyId, title, defaultComparisonIdsKey]);
         useEffect(() => {
           if (compareStrategyIds.length > 0) {
             setShowSleeves(false);
@@ -5063,12 +5043,9 @@
                 dataKey: key,
               })
             ),
-          [allocation, viewMode]
+          [allocation]
         );
         const canSplitSleeves = compareStrategyIds.length === 0 && activeSleeveSeries.length > 0;
-        useEffect(() => {
-          if (showSleeves && canSplitSleeves) setViewMode("percent");
-        }, [showSleeves, canSplitSleeves]);
         const rawData = useMemo(() => buildPerformanceSeries(allocation, initialInvestment, effectiveMonthlyContribution, funds, currency), [allocation, funds, initialInvestment, effectiveMonthlyContribution, currency]);
         const boundedRawData = useMemo(
           () => rawData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs),
@@ -5189,17 +5166,14 @@
                 <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
                   {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((option) => {
                     const active = viewMode === option.id;
-                    const locked = showSleeves && canSplitSleeves && option.id === "value";
                     return (
                       <button
                         key={option.id}
                         type="button"
                         role="tab"
                         aria-selected={active}
-                        disabled={locked}
-                        onClick={() => !locked && setViewMode(option.id)}
-                        title={locked ? "Při rozdělení do složek je dostupná pouze výkonnost" : undefined}
-                        className={"rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-all " + (locked ? "cursor-not-allowed opacity-40 text-slate-400" : active ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}
+                        onClick={() => setViewMode(option.id)}
+                        className={"rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition-all " + (active ? "bg-ep-navy text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}
                       >
                         {option.label}
                       </button>
@@ -5409,7 +5383,20 @@
         );
       }
 
+      function isPerformanceUnavailable(value) {
+        return value === null || value === undefined || !Number.isFinite(value);
+      }
+
+      function formatPerformanceValue(value) {
+        if (isPerformanceUnavailable(value)) return "-";
+        const positive = value >= 0;
+        return `${positive ? "+" : ""}${value.toFixed(2)} %`;
+      }
+
       function PerformanceCell({ value }) {
+        if (isPerformanceUnavailable(value)) {
+          return <span className="font-semibold tabular-nums text-slate-400">-</span>;
+        }
         const positive = value >= 0;
         return (
           <span
@@ -5418,24 +5405,24 @@
               (positive ? "text-emerald-600" : "text-rose-600")
             }
           >
-            {(positive ? "+" : "") + value.toFixed(2)} %
+            {formatPerformanceValue(value)}
           </span>
         );
       }
 
       function FundHistoricalPerformanceInline({ perf }) {
         const items = [
-          { label: "1R", value: perf?.p1y ?? 0 },
-          { label: "3R", value: perf?.p3y ?? 0 },
-          { label: "5L", value: perf?.p5y ?? 0 },
+          { label: "1R", value: perf?.p1y ?? null },
+          { label: "3R", value: perf?.p3y ?? null },
+          { label: "5L", value: perf?.p5y ?? null },
         ];
         return (
           <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px]">
             {items.map((item) => (
               <span key={item.label} className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-1.5 py-0.5 text-slate-500">
                 <span>{item.label}</span>
-                <span className={item.value >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
-                  {(item.value >= 0 ? "+" : "") + Number(item.value || 0).toFixed(2)} %
+                <span className={isPerformanceUnavailable(item.value) ? "font-semibold text-slate-400" : item.value >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                  {formatPerformanceValue(item.value)}
                 </span>
               </span>
             ))}
@@ -7013,7 +7000,7 @@
         ];
 
         const fmtPct = (v) => {
-          if (v === null || v === undefined) return <span className="text-slate-400">–</span>;
+          if (v === null || v === undefined) return <span className="text-slate-400">-</span>;
           const positive = v >= 0;
           return (
             <span className={"font-semibold tabular-nums " + (positive ? "text-emerald-600" : "text-rose-600")}>
