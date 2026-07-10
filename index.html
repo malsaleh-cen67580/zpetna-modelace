@@ -3266,7 +3266,7 @@
         if (!rawPerf) return { p1y: null, p3y: null, p5y: null };
         const r1 = rawPerf.p1y, r3 = rawPerf.p3y, r5 = rawPerf.p5y;
         const normalizePublishedPerf = (value, minimumMonths) =>
-          Number.isFinite(value) && Math.abs(value) > 1e-12 && months >= minimumMonths ? value : null;
+          Number.isFinite(value) && months >= minimumMonths ? value : null;
         return {
           p1y: normalizePublishedPerf(r1, 12),
           p3y: normalizePublishedPerf(r3, 36),
@@ -4043,7 +4043,7 @@
         const values = compoundSeries(initialInvestment, boundedWeekly);
         const finalValue = values[values.length - 1];
         const totalReturn =
-          ((finalValue - initialInvestment) / initialInvestment) * 100;
+          initialInvestment > 0 ? ((finalValue - initialInvestment) / initialInvestment) * 100 : 0;
         const totalMonths = TIMELINE[lastIndex].monthsSinceStart;
         const cagr = annualisedReturn(initialInvestment, finalValue, Math.max(1, totalMonths));
         const volatility = stddev(boundedWeekly) * Math.sqrt(52);
@@ -4156,7 +4156,7 @@
           ],
           fundsByCurrency: {
             EUR: [{ name: "BNP Paribas Funds Euro Money Market", weight: 100, sleeve: "Úroková složka" }],
-            USD: [{ name: "BNP Paribas Funds USD Money Market", weight: 100, sleeve: "Úroková složka" }],
+            USD: [{ name: "BNP Paribas Funds Usd Money Market", weight: 100, sleeve: "Úroková složka" }],
           },
         },
         {
