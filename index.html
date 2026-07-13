@@ -5273,7 +5273,9 @@
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-right shrink-0">
                   <div className="text-[10px] uppercase tracking-widest text-slate-500">{viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota"}</div>
                   <div className="font-semibold ep-text-navy md:text-lg">{viewMode === "percent" ? `${Number(finalValue) >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %` : formatMoney(finalValue)}</div>
-                  <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>
+                  {viewMode === "value" && (
+                    <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>
+                  )}
                 </div>
                 <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
                   {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((option) => {
@@ -7048,6 +7050,7 @@
                 // Use the actual contributed amount from the series (respects fund start date)
                 const investedBase = realSeries[f.id].contributed[index] ?? (initialInvestment + monthlyContribution * monthsSinceStart);
                 row[f.id] = value !== null ? +value.toFixed(2) : null;
+                row[`${f.id}Contributed`] = Number.isFinite(investedBase) ? +investedBase.toFixed(2) : null;
                 row[`${f.id}Pct`] =
                   value !== null && investedBase > 0
                     ? +(((value / investedBase) - 1) * 100).toFixed(2)
@@ -7057,6 +7060,7 @@
               const annualRate = f.p5y ?? f.p3y ?? f.p1y;
               if (annualRate === null || annualRate === undefined) {
                 row[f.id] = null;
+                row[`${f.id}Contributed`] = null;
                 row[`${f.id}Pct`] = null;
                 return;
               }
@@ -7069,6 +7073,7 @@
                     monthlyContribution * ((Math.pow(1 + monthlyRate, monthCount) - 1) / monthlyRate);
               const investedBase = initialInvestment + monthlyContribution * monthCount;
               row[f.id] = +value.toFixed(2);
+              row[`${f.id}Contributed`] = +investedBase.toFixed(2);
               row[`${f.id}Pct`] =
                 investedBase > 0 ? +(((value / investedBase) - 1) * 100).toFixed(2) : null;
             });
@@ -7081,7 +7086,7 @@
         );
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
 
-        const displayData = useMemo(() => {
+        const filteredGrowthData = useMemo(() => {
           // Clamp to the common last known date for all selected funds in this comparison.
           const boundedGrowthData = growthData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs);
           let filtered;
@@ -7104,14 +7109,18 @@
           } else {
             filtered = boundedGrowthData;
           }
-          return buildStartAnchoredDisplayData(filtered, neniDataKeys, {
+          return filtered;
+        }, [growthData, commonMaxTs, horizonMonths, customDateFrom, customDateTo]);
+
+        const displayData = useMemo(() => {
+          return buildStartAnchoredDisplayData(filteredGrowthData, neniDataKeys, {
             mode: viewMode,
             referenceValue,
             anchorOverrides: {
               referenceValue,
             },
           });
-        }, [growthData, commonMaxTs, horizonMonths, customDateFrom, customDateTo, neniDataKeys, viewMode, referenceValue]);
+        }, [filteredGrowthData, neniDataKeys, viewMode, referenceValue]);
 
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -7125,6 +7134,31 @@
         }, [displayData]
         );
         const finalRow = displayData.length ? displayData[displayData.length - 1] : null;
+        const fundPeriodChangeMap = useMemo(() => {
+          if (!filteredGrowthData.length) return {};
+          const periodFirstRow = filteredGrowthData[0];
+          const periodLastRow = filteredGrowthData[filteredGrowthData.length - 1];
+          return Object.fromEntries(
+            compFunds.map((fund) => {
+              const key = fund.id;
+              const periodStartPortfolio = Number(periodFirstRow?.[key]);
+              const periodEndPortfolio = Number(periodLastRow?.[key]);
+              const periodStartContributed = Number(periodFirstRow?.[`${key}Contributed`]);
+              const periodEndContributed = Number(periodLastRow?.[`${key}Contributed`]);
+              if (
+                !Number.isFinite(periodStartPortfolio) ||
+                !Number.isFinite(periodEndPortfolio) ||
+                !Number.isFinite(periodStartContributed) ||
+                !Number.isFinite(periodEndContributed)
+              ) {
+                return [key, null];
+              }
+              const periodBase = periodStartPortfolio + (periodEndContributed - periodStartContributed);
+              const totalChange = periodBase > 0 ? ((periodEndPortfolio - periodBase) / periodBase) * 100 : 0;
+              return [key, totalChange];
+            })
+          );
+        }, [filteredGrowthData, compFunds]);
         const chartLabelValue = viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota";
         const neniYAxis = useMemo(
           () =>
@@ -7526,6 +7560,7 @@
                       {compFunds.map((f, idx) => {
                         const valueKey = f.id;
                         const finalValue = finalRow ? finalRow[valueKey] : null;
+                        const totalChange = fundPeriodChangeMap[valueKey];
                         return (
                           <div key={f.id} className="relative rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <button type="button" onClick={() => toggleFund(f.id)} className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" aria-label={`Odebrat ${f.name} z porovnání`} title="Odebrat fond z porovnání">×</button>
@@ -7541,6 +7576,11 @@
                                 ? `${finalValue >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %`
                                 : formatMoney(finalValue)}
                             </div>
+                            {viewMode === "value" && Number.isFinite(totalChange) && (
+                              <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                {totalChange >= 0 ? "▲" : "▼"} {Number(totalChange).toFixed(2)} % proti vloženým prostředkům
+                              </div>
+                            )}
                             <div className="text-[10px] uppercase tracking-widest text-slate-400">{chartLabelValue}</div>
                           </div>
                         );
