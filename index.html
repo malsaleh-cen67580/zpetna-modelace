@@ -3567,18 +3567,30 @@
       ];
 
       // Compute portfolio value series using weekly returns with monthly contributions.
-      // Monthly contribution is added at the start of each new calendar month.
+      // Monthly contribution is added at the start of each new calendar month,
+      // but only after the fund has real data (first non-zero weekly return).
       function computeVariableRateSeries(initialInvestment, monthlyContribution, returns) {
         const values = [initialInvestment];
+        const contributed = [initialInvestment];
         let value = initialInvestment;
+        let totalContributed = initialInvestment;
+        // Determine when the fund first has real data (first non-zero return).
+        // Leading zeros indicate the fund had no history yet — contributions
+        // should not be counted before this point.
+        // Apply the same ≤4-week tolerance used elsewhere: a fund active within the
+        // first 4 weeks is treated as active from the very start (minor data gaps).
+        const rawFirstActive = returns.findIndex((r) => Math.abs(Number(r) || 0) > 1e-12);
+        const firstActiveIndex = rawFirstActive < 0 ? -1 : (rawFirstActive <= 4 ? 0 : rawFirstActive);
         for (let i = 0; i < returns.length; i++) {
-          if (WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i]) {
+          if (WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i] && firstActiveIndex >= 0 && i >= firstActiveIndex) {
             value += monthlyContribution;
+            totalContributed += monthlyContribution;
           }
           value = value * (1 + returns[i] / 100);
           values.push(value);
+          contributed.push(totalContributed);
         }
-        return values;
+        return { values, contributed };
       }
 
       /* ------------------------------------------------------------------ */
@@ -3661,6 +3673,52 @@
           });
         }
 
+        // Build a per-timestep contribution fraction so that contributions are only
+        // added for funds that already have real data (non-zero returns). Funds with
+        // leading zeros in their series represent periods before the fund existed —
+        // regular investments must not be counted before a fund's first real value.
+        let contributionFractionPerStep = null;
+        if (normalizedContribution > 0) {
+          const totalWeight = Object.values(effectiveAlloc).reduce((s, w) => s + (Number(w) || 0), 0);
+          if (totalWeight > 0) {
+            const keyFirstActive = {};
+            Object.keys(effectiveAlloc).forEach((key) => {
+              if (key.startsWith("SIM::")) {
+                // Simulated series have no leading zeros — always active from the start.
+                keyFirstActive[key] = 0;
+                return;
+              }
+              let series = null;
+              if (key.startsWith("ISIN::")) {
+                series = FUND_WEEKLY_RETURNS_BY_ISIN[key.slice(6)] || null;
+              } else {
+                series = getFundReturnSeries(key, currency) || WEEKLY_HISTORICAL_RETURNS[key] || null;
+              }
+              if (series) {
+                const idx = series.findIndex((r) => Math.abs(Number(r) || 0) > 1e-12);
+                // Apply the same ≤4-week tolerance: minor data gaps at the very start
+                // are treated as active from the beginning (backward-compatible).
+                keyFirstActive[key] = idx < 0 ? Infinity : (idx <= 4 ? 0 : idx);
+              } else {
+                keyFirstActive[key] = 0;
+              }
+            });
+
+            const hasDelayedFunds = Object.values(keyFirstActive).some((idx) => idx > 0);
+            if (hasDelayedFunds) {
+              const len = weekly.length;
+              contributionFractionPerStep = new Array(len);
+              for (let i = 0; i < len; i++) {
+                let activeWeight = 0;
+                Object.entries(effectiveAlloc).forEach(([key, weight]) => {
+                  if ((keyFirstActive[key] ?? 0) <= i) activeWeight += (Number(weight) || 0);
+                });
+                contributionFractionPerStep[i] = activeWeight / totalWeight;
+              }
+            }
+          }
+        }
+
         const sleeveState = Object.fromEntries(
           SLEEVE_SERIES.map(({ key }) => {
             return [
@@ -3688,10 +3746,12 @@
 
         for (let i = 0; i < weekly.length; i++) {
           const isNewMonth = WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i];
+          const fraction = contributionFractionPerStep ? (contributionFractionPerStep[i] ?? 1) : 1;
+          const effectiveContribution = normalizedContribution * fraction;
           if (isNewMonth) {
-            portfolioValue += normalizedContribution;
-            inflationValue += normalizedContribution;
-            totalContributed += normalizedContribution;
+            portfolioValue += effectiveContribution;
+            inflationValue += effectiveContribution;
+            totalContributed += effectiveContribution;
           }
           portfolioValue = portfolioValue * (1 + weekly[i] / 100);
           inflationValue = inflationValue * (1 - BENCHMARK_INFLATION_WEEKLY[i] / 100);
@@ -3702,8 +3762,8 @@
             const sleeve = sleeveState[key];
             if (!sleeve) return;
             if (isNewMonth) {
-              sleeve.value += sleeve.monthlyContribution;
-              sleeve.contributed += sleeve.monthlyContribution;
+              sleeve.value += sleeve.monthlyContribution * fraction;
+              sleeve.contributed += sleeve.monthlyContribution * fraction;
             }
             const sleeveWeight = (allocation[key] || 0) / 100;
             const assetWeeklyReturn = (sleeveWeeklyReturns[key]?.[i] ?? WEEKLY_HISTORICAL_RETURNS[key]?.[i] ?? weekly[i]) || 0;
@@ -6864,7 +6924,9 @@
         }, [currency]);
 
         const growthData = useMemo(() => {
-          // Pre-compute real NAV-based series for all funds that have daily return data
+          // Pre-compute real NAV-based series for all funds that have daily return data.
+          // computeVariableRateSeries returns { values, contributed } where contributions
+          // are skipped before the fund's first real non-zero return.
           const realSeries = {};
           compFunds.forEach((f) => {
             const returns = getFundReturnSeriesByIsin(f.isin) || getFundReturnSeries(f.name, currency);
@@ -6894,8 +6956,9 @@
             compFunds.forEach((f) => {
               // Use real NAV-based weekly growth when available
               if (realSeries[f.id]) {
-                const value = realSeries[f.id][index] ?? null;
-                const investedBase = initialInvestment + monthlyContribution * monthsSinceStart;
+                const value = realSeries[f.id].values[index] ?? null;
+                // Use the actual contributed amount from the series (respects fund start date)
+                const investedBase = realSeries[f.id].contributed[index] ?? (initialInvestment + monthlyContribution * monthsSinceStart);
                 row[f.id] = value !== null ? +value.toFixed(2) : null;
                 row[`${f.id}Pct`] =
                   value !== null && investedBase > 0
