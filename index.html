@@ -5136,6 +5136,21 @@
           () => rawData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs),
           [rawData, commonMaxTs]
         );
+        const filteredRawData = useMemo(() => {
+          if (horizonMonths === "custom") {
+            const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
+            const toTs = customDateTo
+              ? (() => { const d = new Date(customDateTo + "-01"); d.setMonth(d.getMonth() + 1); return d.getTime() - 1; })()
+              : Infinity;
+            return boundedRawData.filter((row) => row.ts >= fromTs && row.ts <= toTs);
+          } else if (horizonMonths && boundedRawData.length > 0) {
+            const lastTs = boundedRawData[boundedRawData.length - 1].ts;
+            const cutoff = new Date(lastTs);
+            cutoff.setMonth(cutoff.getMonth() - horizonMonths);
+            return boundedRawData.filter((row) => row.ts >= cutoff.getTime());
+          }
+          return boundedRawData;
+        }, [boundedRawData, horizonMonths, customDateFrom, customDateTo]);
         const allComparisonSeriesMap = useMemo(() => {
           const entries = comparisonStrategies.map((strategy) => [
             strategy.id,
@@ -5230,8 +5245,14 @@
         const lastRow = boundedRawData.length ? boundedRawData[boundedRawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
         const recurringContributed = lastRow ? lastRow.recurringContributed : 0;
-        const absoluteGain = lastRow ? lastRow.portfolio - totalContributed : 0;
-        const totalChange = totalContributed > 0 ? (absoluteGain / totalContributed) * 100 : 0;
+        const periodFirstRow = filteredRawData.length > 0 ? filteredRawData[0] : lastRow;
+        const periodLastRow = filteredRawData.length > 0 ? filteredRawData[filteredRawData.length - 1] : lastRow;
+        const periodStartPortfolio = periodFirstRow ? periodFirstRow.portfolio : initialInvestment;
+        const periodStartContributed = periodFirstRow ? periodFirstRow.contributed : initialInvestment;
+        const periodEndPortfolio = periodLastRow ? periodLastRow.portfolio : initialInvestment;
+        const periodEndContributed = periodLastRow ? periodLastRow.contributed : initialInvestment;
+        const periodBase = periodStartPortfolio + (periodEndContributed - periodStartContributed);
+        const totalChange = periodBase > 0 ? ((periodEndPortfolio - periodBase) / periodBase) * 100 : 0;
         const toggleComparisonStrategy = (strategyId) => {
           if (strategyId === baseStrategyId) return;
           setCompareStrategyIds((prev) =>
@@ -5252,7 +5273,7 @@
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-right shrink-0">
                   <div className="text-[10px] uppercase tracking-widest text-slate-500">{viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota"}</div>
                   <div className="font-semibold ep-text-navy md:text-lg">{viewMode === "percent" ? `${Number(finalValue) >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %` : formatMoney(finalValue)}</div>
-                  {viewMode !== "percent" && <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>}
+                  <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
                   {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((option) => {
