@@ -3011,10 +3011,12 @@
         const normalizedReturns = returns.map((value) => Number(value) || 0);
         const normalizedInitialInvestment = Math.max(0, Number(initialInvestment) || 0);
         const normalizedMonthlyContribution = Math.max(0, Number(monthlyContribution) || 0);
-        const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
-        if (firstActiveIndex < 0) return null;
+        const rawFirstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
+        if (rawFirstActiveIndex < 0) return null;
         if (!TIMELINE.length) return null;
-        const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
+        // Use one step earlier than the first non-zero return to capture the inception week where
+        // NAV first became non-zero (transition from NAV=0 gives return=0, not a real "no data" point).
+        const firstUsableIndex = rawFirstActiveIndex <= 4 ? 0 : Math.max(0, rawFirstActiveIndex - 1);
         const uncappedLastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
         const tsBoundLastIndex = getLastTimelineIndexForMaxTs(maxTs, uncappedLastIndex);
         const lastIndex = Math.min(uncappedLastIndex, tsBoundLastIndex);
@@ -3060,14 +3062,17 @@
         currency = "CZK",
         initialInvestment = 1,
         monthlyContribution = 0,
+        maxTs = null,
+        selectedPeriodMonths = null,
       } = {}) {
         const series = getFundReturnSeriesByIsin(isin) || getFundReturnSeries(name, currency);
         if (!series) {
           return getFallbackFundPerf(name, currency);
         }
-        const raw1y = getTrailingAnnualizedReturnFromSeries(series, 12, { initialInvestment, monthlyContribution });
-        const raw3y = getTrailingAnnualizedReturnFromSeries(series, 36, { initialInvestment, monthlyContribution });
-        const raw5y = getTrailingAnnualizedReturnFromSeries(series, 60, { initialInvestment, monthlyContribution });
+        const periodTooShort = (n) => selectedPeriodMonths !== null && selectedPeriodMonths !== undefined && selectedPeriodMonths < n;
+        const raw1y = periodTooShort(12) ? null : getTrailingAnnualizedReturnFromSeries(series, 12, { initialInvestment, monthlyContribution, maxTs });
+        const raw3y = periodTooShort(36) ? null : getTrailingAnnualizedReturnFromSeries(series, 36, { initialInvestment, monthlyContribution, maxTs });
+        const raw5y = periodTooShort(60) ? null : getTrailingAnnualizedReturnFromSeries(series, 60, { initialInvestment, monthlyContribution, maxTs });
         return {
           p1y: raw1y !== null ? +Number(raw1y).toFixed(2) : null,
           p3y: raw3y !== null ? +Number(raw3y).toFixed(2) : null,
@@ -3269,11 +3274,12 @@
         };
       }
 
-      function computePortfolioPerf(funds, currency, initialInvestment = 1, monthlyContribution = 0) {
+      function computePortfolioPerf(funds, currency, initialInvestment = 1, monthlyContribution = 0, periodOptions = {}) {
         if (!funds || !funds.length) {
           return { performance1y: null, performance3y: null, performance5y: null };
         }
-        const maxTsForComposition = getCommonMaxTsForFunds(funds, currency);
+        const { maxTs: overrideMaxTs, selectedPeriodMonths } = periodOptions;
+        const maxTsForComposition = overrideMaxTs || getCommonMaxTsForFunds(funds, currency);
         const allocation = funds.reduce((acc, fund) => {
           const bucket = fund.sleeve === "Úroková složka"
             ? "bonds"
@@ -3284,8 +3290,9 @@
           return acc;
         }, { bonds: 0, stocks: 0, alternatives: 0 });
         const weekly = weightedPeriodReturns(fundsBasedAllocation(funds, allocation, currency), currency);
+        const periodTooShort = (n) => selectedPeriodMonths !== null && selectedPeriodMonths !== undefined && selectedPeriodMonths < n;
         return {
-          performance1y: ((rawValue) =>
+          performance1y: periodTooShort(12) ? null : ((rawValue) =>
             rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 12, {
               initialInvestment,
@@ -3293,7 +3300,7 @@
               maxTs: maxTsForComposition,
             })
           ),
-          performance3y: ((rawValue) =>
+          performance3y: periodTooShort(36) ? null : ((rawValue) =>
             rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 36, {
               initialInvestment,
@@ -3301,7 +3308,7 @@
               maxTs: maxTsForComposition,
             })
           ),
-          performance5y: ((rawValue) =>
+          performance5y: periodTooShort(60) ? null : ((rawValue) =>
             rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 60, {
               initialInvestment,
@@ -3310,6 +3317,28 @@
             })
           ),
         };
+      }
+
+      // Computes the effective maxTs and selectedPeriodMonths from a chart period selection.
+      // Used to scope historical performance calculations to the selected chart period.
+      function computePeriodOptions(horizonMonths, customDateFrom, customDateTo, commonMaxTs) {
+        let maxTs = commonMaxTs;
+        let selectedPeriodMonths = null;
+        if (horizonMonths === "custom") {
+          if (customDateTo) {
+            const d = new Date(customDateTo + "-01");
+            d.setMonth(d.getMonth() + 1);
+            maxTs = Math.min(d.getTime() - 1, commonMaxTs);
+          }
+          if (customDateFrom && customDateTo) {
+            const from = new Date(customDateFrom + "-01");
+            const to = new Date(customDateTo + "-01");
+            selectedPeriodMonths = Math.max(0, (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()));
+          }
+        } else if (horizonMonths) {
+          selectedPeriodMonths = horizonMonths;
+        }
+        return { maxTs, selectedPeriodMonths };
       }
 
       // Inflation benchmark series (daily, spread from monthly CPI data)
@@ -3698,7 +3727,7 @@
                 const idx = series.findIndex((r) => Math.abs(Number(r) || 0) > 1e-12);
                 // Apply the same ≤4-week tolerance: minor data gaps at the very start
                 // are treated as active from the beginning (backward-compatible).
-                keyFirstActive[key] = idx < 0 ? Infinity : (idx <= 4 ? 0 : idx);
+                keyFirstActive[key] = idx < 0 ? Infinity : (idx <= 4 ? 0 : Math.max(0, idx - 1));
               } else {
                 keyFirstActive[key] = 0;
               }
@@ -5050,6 +5079,7 @@
         defaultComparisonIds = [],
         comparisonStrategies = COMPARISON_STRATEGIES,
         activeMode = "EP",
+        onPeriodChange = null,
       }) {
         const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
         const chartId = useId().replace(/:/g, "");
@@ -5168,6 +5198,12 @@
             },
           });
         }, [data, commonMaxTs, horizonMonths, customDateFrom, customDateTo, activeDataKeys, viewMode, initialInvestment, referenceValue]);
+        // Notify parent of the effective period (maxTs and selectedPeriodMonths) whenever it changes.
+        useEffect(() => {
+          if (!onPeriodChange) return;
+          const periodOpts = computePeriodOptions(horizonMonths, customDateFrom, customDateTo, commonMaxTs);
+          onPeriodChange(periodOpts);
+        }, [horizonMonths, customDateFrom, customDateTo, commonMaxTs, onPeriodChange]);
         // Show one tick per quarter (approximately every 63 trading days)
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -5838,6 +5874,7 @@
         const { currency, initialInvestment, monthlyContribution } = useInvestment();
         const [selectedId, setSelectedId] = useState(null);
         const [detailFunds, setDetailFunds] = useState([]);
+        const [chartPeriod, setChartPeriod] = useState({ maxTs: null, selectedPeriodMonths: null });
         const presetPortfolios = useMemo(
           () => (activeMode === "MMA" ? MMA_PRESET_PORTFOLIOS : PRESET_PORTFOLIOS),
           [activeMode]
@@ -5904,9 +5941,9 @@
         }, [detailFunds, activePortfolio]);
         const detailStats = useMemo(() => {
           if (!detailFunds || !detailFunds.length) return stats[activePortfolio.id];
-          const portPerf = computePortfolioPerf(detailFunds, currency, initialInvestment, monthlyContribution);
+          const portPerf = computePortfolioPerf(detailFunds, currency, initialInvestment, monthlyContribution, chartPeriod);
           return { ...computeStats(detailAllocation, initialInvestment, detailFunds, currency), ...portPerf };
-        }, [detailFunds, detailAllocation, currency, initialInvestment, monthlyContribution, activePortfolio, stats]);
+        }, [detailFunds, detailAllocation, currency, initialInvestment, monthlyContribution, activePortfolio, stats, chartPeriod]);
         const openDetail = (portfolio) => {
           setSelectedId((prev) => (prev === portfolio.id ? null : portfolio.id));
           setDetailFunds(getTemplateFundsForCurrency(portfolio, currency));
@@ -5957,6 +5994,7 @@
                   defaultComparisonIds={selected ? [] : presetPortfolios.filter((p) => p.id !== activePortfolio.id).map((p) => p.id)}
                   comparisonStrategies={comparisonStrategies}
                   activeMode={activeMode}
+                  onPeriodChange={setChartPeriod}
                 />
                 <HistoricalPerformanceSidebar stats={detailStats} />
               </div>
@@ -6023,6 +6061,7 @@
         const [filterSleeve, setFilterSleeve] = useState("Všechny složky");
         const [activeTemplate, setActiveTemplate] = useState("custom");
         const [showSimulation, setShowSimulation] = useState(false);
+        const [chartPeriod, setChartPeriod] = useState({ maxTs: null, selectedPeriodMonths: null });
         const chartRef = useRef(null);
 
         const sleeveOrder = ["Úroková složka", "Akciová složka", "Alternativní složka"];
@@ -6059,10 +6098,11 @@
             funds,
             currency,
             initialInvestment,
-            monthlyContribution
+            monthlyContribution,
+            chartPeriod
           );
           return { ...computeStats(detailAllocation, initialInvestment, funds, currency), ...portPerf };
-        }, [detailAllocation, initialInvestment, monthlyContribution, funds, currency]);
+        }, [detailAllocation, initialInvestment, monthlyContribution, funds, currency, chartPeriod]);
         const customBaseStrategyId = useMemo(() => {
           return activeTemplate !== "custom" ? activeTemplate : null;
         }, [activeTemplate]);
@@ -6335,6 +6375,7 @@
                     subtitle="Vývoj se počítá z fondové skladby, kterou si průběžně upravuješ."
                     baseStrategyId={customBaseStrategyId}
                     comparisonStrategies={comparisonStrategies}
+                    onPeriodChange={setChartPeriod}
                   />
                   <HistoricalPerformanceSidebar stats={customStats} />
                 </div>
@@ -6447,9 +6488,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Erste Premier — Demo · Modelace na
-                základě hypotetických historických dat. Nejedná se o investiční
-                doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
               </footer>
             </main>
           </div>
@@ -6721,7 +6760,7 @@
               </div>
 
               <p className="mt-12 text-center text-[11px] text-white/35 tracking-wide">
-                © {new Date().getFullYear()} Erste Premier · Demo · Nejedná se o investiční doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
               </p>
             </div>
           </div>
@@ -6775,6 +6814,30 @@
         const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
         const isinFor = (fundName) => activeIsins[fundName] || "";
 
+        const periodSelectionFunds = useMemo(() => {
+          const fundMap = new Map(
+            activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
+              const isin = fundIsin || isinFor(name);
+              return [`${name}::${isin || currency}`, { name, sleeve, isin }];
+            })
+          );
+          if (activeMode === "MMA" && currency === "CZK") {
+            MMA_SIMULATED_MIXES.forEach((mix) => {
+              fundMap.set(mix.id, { name: mix.name, sleeve: mix.sleeve, isin: mix.isin });
+            });
+          }
+          return selectedFunds.map((id) => fundMap.get(id)).filter(Boolean);
+        }, [activeCatalogFunds, activeMode, currency, selectedFunds]);
+        const periodSelectionMaxTs = useMemo(
+          () => getCommonMaxTsForFunds(periodSelectionFunds, currency),
+          [periodSelectionFunds, currency]
+        );
+        // Effective period options for performance calculations (respects selected chart period).
+        const { maxTs: effectivePerfMaxTs, selectedPeriodMonths: effectivePeriodMonths } = useMemo(
+          () => computePeriodOptions(horizonMonths, customDateFrom, customDateTo, periodSelectionMaxTs),
+          [horizonMonths, customDateFrom, customDateTo, periodSelectionMaxTs]
+        );
+
         // Build flat list of all funds available in Zpětná modelace for the selected currency.
         const allFunds = useMemo(() => {
           const catalogFunds = activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
@@ -6785,6 +6848,8 @@
               currency,
               initialInvestment,
               monthlyContribution,
+              maxTs: effectivePerfMaxTs,
+              selectedPeriodMonths: effectivePeriodMonths,
             });
             const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
             return {
@@ -6816,6 +6881,8 @@
                     currency,
                     initialInvestment,
                     monthlyContribution,
+                    maxTs: effectivePerfMaxTs,
+                    selectedPeriodMonths: effectivePeriodMonths,
                   })
                 : { p1y: null, p3y: null, p5y: null };
               return {
@@ -6829,7 +6896,7 @@
               };
             }),
           ];
-        }, [activeCatalogFunds, activeIsins, currency, activeMode, initialInvestment, monthlyContribution]);
+        }, [activeCatalogFunds, activeIsins, currency, activeMode, initialInvestment, monthlyContribution, effectivePerfMaxTs, effectivePeriodMonths]);
 
         const categories = useMemo(() => {
           const cats = new Set(allFunds.map((f) => f.mainCategory));
@@ -7601,7 +7668,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Invest Tools — Demo · Výkonnosti vycházejí z přibližných historických dat. Nejedná se o investiční doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
               </footer>
             </main>
           </div>
