@@ -3011,10 +3011,12 @@
         const normalizedReturns = returns.map((value) => Number(value) || 0);
         const normalizedInitialInvestment = Math.max(0, Number(initialInvestment) || 0);
         const normalizedMonthlyContribution = Math.max(0, Number(monthlyContribution) || 0);
-        const firstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
-        if (firstActiveIndex < 0) return null;
+        const rawFirstActiveIndex = normalizedReturns.findIndex((value) => Math.abs(value) > 1e-12);
+        if (rawFirstActiveIndex < 0) return null;
         if (!TIMELINE.length) return null;
-        const firstUsableIndex = firstActiveIndex <= 4 ? 0 : firstActiveIndex;
+        // Use one step earlier than the first non-zero return to capture the inception week where
+        // NAV first became non-zero (transition from NAV=0 gives return=0, not a real "no data" point).
+        const firstUsableIndex = rawFirstActiveIndex <= 4 ? 0 : Math.max(0, rawFirstActiveIndex - 1);
         const uncappedLastIndex = Math.min(normalizedReturns.length - 1, TIMELINE.length - 1);
         const tsBoundLastIndex = getLastTimelineIndexForMaxTs(maxTs, uncappedLastIndex);
         const lastIndex = Math.min(uncappedLastIndex, tsBoundLastIndex);
@@ -3060,14 +3062,17 @@
         currency = "CZK",
         initialInvestment = 1,
         monthlyContribution = 0,
+        maxTs = null,
+        selectedPeriodMonths = null,
       } = {}) {
         const series = getFundReturnSeriesByIsin(isin) || getFundReturnSeries(name, currency);
         if (!series) {
           return getFallbackFundPerf(name, currency);
         }
-        const raw1y = getTrailingAnnualizedReturnFromSeries(series, 12, { initialInvestment, monthlyContribution });
-        const raw3y = getTrailingAnnualizedReturnFromSeries(series, 36, { initialInvestment, monthlyContribution });
-        const raw5y = getTrailingAnnualizedReturnFromSeries(series, 60, { initialInvestment, monthlyContribution });
+        const periodTooShort = (n) => selectedPeriodMonths !== null && selectedPeriodMonths !== undefined && selectedPeriodMonths < n;
+        const raw1y = periodTooShort(12) ? null : getTrailingAnnualizedReturnFromSeries(series, 12, { initialInvestment, monthlyContribution, maxTs });
+        const raw3y = periodTooShort(36) ? null : getTrailingAnnualizedReturnFromSeries(series, 36, { initialInvestment, monthlyContribution, maxTs });
+        const raw5y = periodTooShort(60) ? null : getTrailingAnnualizedReturnFromSeries(series, 60, { initialInvestment, monthlyContribution, maxTs });
         return {
           p1y: raw1y !== null ? +Number(raw1y).toFixed(2) : null,
           p3y: raw3y !== null ? +Number(raw3y).toFixed(2) : null,
@@ -3269,11 +3274,12 @@
         };
       }
 
-      function computePortfolioPerf(funds, currency, initialInvestment = 1, monthlyContribution = 0) {
+      function computePortfolioPerf(funds, currency, initialInvestment = 1, monthlyContribution = 0, periodOptions = {}) {
         if (!funds || !funds.length) {
           return { performance1y: null, performance3y: null, performance5y: null };
         }
-        const maxTsForComposition = getCommonMaxTsForFunds(funds, currency);
+        const { maxTs: overrideMaxTs, selectedPeriodMonths } = periodOptions;
+        const maxTsForComposition = overrideMaxTs || getCommonMaxTsForFunds(funds, currency);
         const allocation = funds.reduce((acc, fund) => {
           const bucket = fund.sleeve === "Úroková složka"
             ? "bonds"
@@ -3284,8 +3290,9 @@
           return acc;
         }, { bonds: 0, stocks: 0, alternatives: 0 });
         const weekly = weightedPeriodReturns(fundsBasedAllocation(funds, allocation, currency), currency);
+        const periodTooShort = (n) => selectedPeriodMonths !== null && selectedPeriodMonths !== undefined && selectedPeriodMonths < n;
         return {
-          performance1y: ((rawValue) =>
+          performance1y: periodTooShort(12) ? null : ((rawValue) =>
             rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 12, {
               initialInvestment,
@@ -3293,7 +3300,7 @@
               maxTs: maxTsForComposition,
             })
           ),
-          performance3y: ((rawValue) =>
+          performance3y: periodTooShort(36) ? null : ((rawValue) =>
             rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 36, {
               initialInvestment,
@@ -3301,7 +3308,7 @@
               maxTs: maxTsForComposition,
             })
           ),
-          performance5y: ((rawValue) =>
+          performance5y: periodTooShort(60) ? null : ((rawValue) =>
             rawValue !== null ? +Number(rawValue).toFixed(2) : null)(
             getTrailingAnnualizedReturnFromSeries(weekly, 60, {
               initialInvestment,
@@ -3310,6 +3317,28 @@
             })
           ),
         };
+      }
+
+      // Computes the effective maxTs and selectedPeriodMonths from a chart period selection.
+      // Used to scope historical performance calculations to the selected chart period.
+      function computePeriodOptions(horizonMonths, customDateFrom, customDateTo, commonMaxTs) {
+        let maxTs = commonMaxTs;
+        let selectedPeriodMonths = null;
+        if (horizonMonths === "custom") {
+          if (customDateTo) {
+            const d = new Date(customDateTo + "-01");
+            d.setMonth(d.getMonth() + 1);
+            maxTs = Math.min(d.getTime() - 1, commonMaxTs);
+          }
+          if (customDateFrom && customDateTo) {
+            const from = new Date(customDateFrom + "-01");
+            const to = new Date(customDateTo + "-01");
+            selectedPeriodMonths = Math.max(0, (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()));
+          }
+        } else if (horizonMonths) {
+          selectedPeriodMonths = horizonMonths;
+        }
+        return { maxTs, selectedPeriodMonths };
       }
 
       // Inflation benchmark series (daily, spread from monthly CPI data)
@@ -3567,18 +3596,30 @@
       ];
 
       // Compute portfolio value series using weekly returns with monthly contributions.
-      // Monthly contribution is added at the start of each new calendar month.
+      // Monthly contribution is added at the start of each new calendar month,
+      // but only after the fund has real data (first non-zero weekly return).
       function computeVariableRateSeries(initialInvestment, monthlyContribution, returns) {
         const values = [initialInvestment];
+        const contributed = [initialInvestment];
         let value = initialInvestment;
+        let totalContributed = initialInvestment;
+        // Determine when the fund first has real data (first non-zero return).
+        // Leading zeros indicate the fund had no history yet — contributions
+        // should not be counted before this point.
+        // Apply the same ≤4-week tolerance used elsewhere: a fund active within the
+        // first 4 weeks is treated as active from the very start (minor data gaps).
+        const rawFirstActive = returns.findIndex((r) => Math.abs(Number(r) || 0) > 1e-12);
+        const firstActiveIndex = rawFirstActive < 0 ? -1 : (rawFirstActive <= 4 ? 0 : rawFirstActive);
         for (let i = 0; i < returns.length; i++) {
-          if (WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i]) {
+          if (WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i] && firstActiveIndex >= 0 && i >= firstActiveIndex) {
             value += monthlyContribution;
+            totalContributed += monthlyContribution;
           }
           value = value * (1 + returns[i] / 100);
           values.push(value);
+          contributed.push(totalContributed);
         }
-        return values;
+        return { values, contributed };
       }
 
       /* ------------------------------------------------------------------ */
@@ -3661,6 +3702,52 @@
           });
         }
 
+        // Build a per-timestep contribution fraction so that contributions are only
+        // added for funds that already have real data (non-zero returns). Funds with
+        // leading zeros in their series represent periods before the fund existed —
+        // regular investments must not be counted before a fund's first real value.
+        let contributionFractionPerStep = null;
+        if (normalizedContribution > 0) {
+          const totalWeight = Object.values(effectiveAlloc).reduce((s, w) => s + (Number(w) || 0), 0);
+          if (totalWeight > 0) {
+            const keyFirstActive = {};
+            Object.keys(effectiveAlloc).forEach((key) => {
+              if (key.startsWith("SIM::")) {
+                // Simulated series have no leading zeros — always active from the start.
+                keyFirstActive[key] = 0;
+                return;
+              }
+              let series = null;
+              if (key.startsWith("ISIN::")) {
+                series = FUND_WEEKLY_RETURNS_BY_ISIN[key.slice(6)] || null;
+              } else {
+                series = getFundReturnSeries(key, currency) || WEEKLY_HISTORICAL_RETURNS[key] || null;
+              }
+              if (series) {
+                const idx = series.findIndex((r) => Math.abs(Number(r) || 0) > 1e-12);
+                // Apply the same ≤4-week tolerance: minor data gaps at the very start
+                // are treated as active from the beginning (backward-compatible).
+                keyFirstActive[key] = idx < 0 ? Infinity : (idx <= 4 ? 0 : Math.max(0, idx - 1));
+              } else {
+                keyFirstActive[key] = 0;
+              }
+            });
+
+            const hasDelayedFunds = Object.values(keyFirstActive).some((idx) => idx > 0);
+            if (hasDelayedFunds) {
+              const len = weekly.length;
+              contributionFractionPerStep = new Array(len);
+              for (let i = 0; i < len; i++) {
+                let activeWeight = 0;
+                Object.entries(effectiveAlloc).forEach(([key, weight]) => {
+                  if ((keyFirstActive[key] ?? 0) <= i) activeWeight += (Number(weight) || 0);
+                });
+                contributionFractionPerStep[i] = activeWeight / totalWeight;
+              }
+            }
+          }
+        }
+
         const sleeveState = Object.fromEntries(
           SLEEVE_SERIES.map(({ key }) => {
             return [
@@ -3688,10 +3775,12 @@
 
         for (let i = 0; i < weekly.length; i++) {
           const isNewMonth = WEEKLY_MONTHLY_CONTRIBUTION_SCHEDULE[i];
+          const fraction = contributionFractionPerStep ? (contributionFractionPerStep[i] ?? 1) : 1;
+          const effectiveContribution = normalizedContribution * fraction;
           if (isNewMonth) {
-            portfolioValue += normalizedContribution;
-            inflationValue += normalizedContribution;
-            totalContributed += normalizedContribution;
+            portfolioValue += effectiveContribution;
+            inflationValue += effectiveContribution;
+            totalContributed += effectiveContribution;
           }
           portfolioValue = portfolioValue * (1 + weekly[i] / 100);
           inflationValue = inflationValue * (1 - BENCHMARK_INFLATION_WEEKLY[i] / 100);
@@ -3702,8 +3791,8 @@
             const sleeve = sleeveState[key];
             if (!sleeve) return;
             if (isNewMonth) {
-              sleeve.value += sleeve.monthlyContribution;
-              sleeve.contributed += sleeve.monthlyContribution;
+              sleeve.value += sleeve.monthlyContribution * fraction;
+              sleeve.contributed += sleeve.monthlyContribution * fraction;
             }
             const sleeveWeight = (allocation[key] || 0) / 100;
             const assetWeeklyReturn = (sleeveWeeklyReturns[key]?.[i] ?? WEEKLY_HISTORICAL_RETURNS[key]?.[i] ?? weekly[i]) || 0;
@@ -4990,6 +5079,7 @@
         defaultComparisonIds = [],
         comparisonStrategies = COMPARISON_STRATEGIES,
         activeMode = "EP",
+        onPeriodChange = null,
       }) {
         const { currency, initialInvestment, monthlyContribution, formatMoney } = useInvestment();
         const chartId = useId().replace(/:/g, "");
@@ -5046,6 +5136,21 @@
           () => rawData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs),
           [rawData, commonMaxTs]
         );
+        const filteredRawData = useMemo(() => {
+          if (horizonMonths === "custom") {
+            const fromTs = customDateFrom ? new Date(customDateFrom + "-01").getTime() : -Infinity;
+            const toTs = customDateTo
+              ? (() => { const d = new Date(customDateTo + "-01"); d.setMonth(d.getMonth() + 1); return d.getTime() - 1; })()
+              : Infinity;
+            return boundedRawData.filter((row) => row.ts >= fromTs && row.ts <= toTs);
+          } else if (horizonMonths && boundedRawData.length > 0) {
+            const lastTs = boundedRawData[boundedRawData.length - 1].ts;
+            const cutoff = new Date(lastTs);
+            cutoff.setMonth(cutoff.getMonth() - horizonMonths);
+            return boundedRawData.filter((row) => row.ts >= cutoff.getTime());
+          }
+          return boundedRawData;
+        }, [boundedRawData, horizonMonths, customDateFrom, customDateTo]);
         const allComparisonSeriesMap = useMemo(() => {
           const entries = comparisonStrategies.map((strategy) => [
             strategy.id,
@@ -5108,6 +5213,12 @@
             },
           });
         }, [data, commonMaxTs, horizonMonths, customDateFrom, customDateTo, activeDataKeys, viewMode, initialInvestment, referenceValue]);
+        // Notify parent of the effective period (maxTs and selectedPeriodMonths) whenever it changes.
+        useEffect(() => {
+          if (!onPeriodChange) return;
+          const periodOpts = computePeriodOptions(horizonMonths, customDateFrom, customDateTo, commonMaxTs);
+          onPeriodChange(periodOpts);
+        }, [horizonMonths, customDateFrom, customDateTo, commonMaxTs, onPeriodChange]);
         // Show one tick per quarter (approximately every 63 trading days)
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -5134,8 +5245,14 @@
         const lastRow = boundedRawData.length ? boundedRawData[boundedRawData.length - 1] : null;
         const totalContributed = lastRow ? lastRow.contributed : initialInvestment;
         const recurringContributed = lastRow ? lastRow.recurringContributed : 0;
-        const absoluteGain = lastRow ? lastRow.portfolio - totalContributed : 0;
-        const totalChange = totalContributed > 0 ? (absoluteGain / totalContributed) * 100 : 0;
+        const periodFirstRow = filteredRawData.length > 0 ? filteredRawData[0] : lastRow;
+        const periodLastRow = filteredRawData.length > 0 ? filteredRawData[filteredRawData.length - 1] : lastRow;
+        const periodStartPortfolio = periodFirstRow ? periodFirstRow.portfolio : initialInvestment;
+        const periodStartContributed = periodFirstRow ? periodFirstRow.contributed : initialInvestment;
+        const periodEndPortfolio = periodLastRow ? periodLastRow.portfolio : initialInvestment;
+        const periodEndContributed = periodLastRow ? periodLastRow.contributed : initialInvestment;
+        const periodBase = periodStartPortfolio + (periodEndContributed - periodStartContributed);
+        const totalChange = periodBase > 0 ? ((periodEndPortfolio - periodBase) / periodBase) * 100 : 0;
         const toggleComparisonStrategy = (strategyId) => {
           if (strategyId === baseStrategyId) return;
           setCompareStrategyIds((prev) =>
@@ -5156,7 +5273,9 @@
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-right shrink-0">
                   <div className="text-[10px] uppercase tracking-widest text-slate-500">{viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota"}</div>
                   <div className="font-semibold ep-text-navy md:text-lg">{viewMode === "percent" ? `${Number(finalValue) >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %` : formatMoney(finalValue)}</div>
-                  {viewMode !== "percent" && <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>}
+                  {viewMode === "value" && (
+                    <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>{totalChange >= 0 ? "▲" : "▼"} {totalChange.toFixed(2)} % proti vloženým prostředkům</div>
+                  )}
                 </div>
                 <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0" role="tablist" aria-label="Typ zobrazení grafu">
                   {[{ id: "value", label: `Hodnota ${currency}` }, { id: "percent", label: "Výkonnost %" }].map((option) => {
@@ -5778,6 +5897,7 @@
         const { currency, initialInvestment, monthlyContribution } = useInvestment();
         const [selectedId, setSelectedId] = useState(null);
         const [detailFunds, setDetailFunds] = useState([]);
+        const [chartPeriod, setChartPeriod] = useState({ maxTs: null, selectedPeriodMonths: null });
         const presetPortfolios = useMemo(
           () => (activeMode === "MMA" ? MMA_PRESET_PORTFOLIOS : PRESET_PORTFOLIOS),
           [activeMode]
@@ -5844,9 +5964,9 @@
         }, [detailFunds, activePortfolio]);
         const detailStats = useMemo(() => {
           if (!detailFunds || !detailFunds.length) return stats[activePortfolio.id];
-          const portPerf = computePortfolioPerf(detailFunds, currency, initialInvestment, monthlyContribution);
+          const portPerf = computePortfolioPerf(detailFunds, currency, initialInvestment, monthlyContribution, chartPeriod);
           return { ...computeStats(detailAllocation, initialInvestment, detailFunds, currency), ...portPerf };
-        }, [detailFunds, detailAllocation, currency, initialInvestment, monthlyContribution, activePortfolio, stats]);
+        }, [detailFunds, detailAllocation, currency, initialInvestment, monthlyContribution, activePortfolio, stats, chartPeriod]);
         const openDetail = (portfolio) => {
           setSelectedId((prev) => (prev === portfolio.id ? null : portfolio.id));
           setDetailFunds(getTemplateFundsForCurrency(portfolio, currency));
@@ -5897,6 +6017,7 @@
                   defaultComparisonIds={selected ? [] : presetPortfolios.filter((p) => p.id !== activePortfolio.id).map((p) => p.id)}
                   comparisonStrategies={comparisonStrategies}
                   activeMode={activeMode}
+                  onPeriodChange={setChartPeriod}
                 />
                 <HistoricalPerformanceSidebar stats={detailStats} />
               </div>
@@ -5963,6 +6084,7 @@
         const [filterSleeve, setFilterSleeve] = useState("Všechny složky");
         const [activeTemplate, setActiveTemplate] = useState("custom");
         const [showSimulation, setShowSimulation] = useState(false);
+        const [chartPeriod, setChartPeriod] = useState({ maxTs: null, selectedPeriodMonths: null });
         const chartRef = useRef(null);
 
         const sleeveOrder = ["Úroková složka", "Akciová složka", "Alternativní složka"];
@@ -5999,10 +6121,11 @@
             funds,
             currency,
             initialInvestment,
-            monthlyContribution
+            monthlyContribution,
+            chartPeriod
           );
           return { ...computeStats(detailAllocation, initialInvestment, funds, currency), ...portPerf };
-        }, [detailAllocation, initialInvestment, monthlyContribution, funds, currency]);
+        }, [detailAllocation, initialInvestment, monthlyContribution, funds, currency, chartPeriod]);
         const customBaseStrategyId = useMemo(() => {
           return activeTemplate !== "custom" ? activeTemplate : null;
         }, [activeTemplate]);
@@ -6275,6 +6398,7 @@
                     subtitle="Vývoj se počítá z fondové skladby, kterou si průběžně upravuješ."
                     baseStrategyId={customBaseStrategyId}
                     comparisonStrategies={comparisonStrategies}
+                    onPeriodChange={setChartPeriod}
                   />
                   <HistoricalPerformanceSidebar stats={customStats} />
                 </div>
@@ -6387,9 +6511,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Erste Premier — Demo · Modelace na
-                základě hypotetických historických dat. Nejedná se o investiční
-                doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
               </footer>
             </main>
           </div>
@@ -6661,7 +6783,7 @@
               </div>
 
               <p className="mt-12 text-center text-[11px] text-white/35 tracking-wide">
-                © {new Date().getFullYear()} Erste Premier · Demo · Nejedná se o investiční doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
               </p>
             </div>
           </div>
@@ -6715,6 +6837,30 @@
         const activeIsins = KNOWN_ISINS_BY_CURRENCY[currency] || {};
         const isinFor = (fundName) => activeIsins[fundName] || "";
 
+        const periodSelectionFunds = useMemo(() => {
+          const fundMap = new Map(
+            activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
+              const isin = fundIsin || isinFor(name);
+              return [`${name}::${isin || currency}`, { name, sleeve, isin }];
+            })
+          );
+          if (activeMode === "MMA" && currency === "CZK") {
+            MMA_SIMULATED_MIXES.forEach((mix) => {
+              fundMap.set(mix.id, { name: mix.name, sleeve: mix.sleeve, isin: mix.isin });
+            });
+          }
+          return selectedFunds.map((id) => fundMap.get(id)).filter(Boolean);
+        }, [activeCatalogFunds, activeMode, currency, selectedFunds]);
+        const periodSelectionMaxTs = useMemo(
+          () => getCommonMaxTsForFunds(periodSelectionFunds, currency),
+          [periodSelectionFunds, currency]
+        );
+        // Effective period options for performance calculations (respects selected chart period).
+        const { maxTs: effectivePerfMaxTs, selectedPeriodMonths: effectivePeriodMonths } = useMemo(
+          () => computePeriodOptions(horizonMonths, customDateFrom, customDateTo, periodSelectionMaxTs),
+          [horizonMonths, customDateFrom, customDateTo, periodSelectionMaxTs]
+        );
+
         // Build flat list of all funds available in Zpětná modelace for the selected currency.
         const allFunds = useMemo(() => {
           const catalogFunds = activeCatalogFunds.map(({ name, sleeve, isin: fundIsin }) => {
@@ -6725,6 +6871,8 @@
               currency,
               initialInvestment,
               monthlyContribution,
+              maxTs: effectivePerfMaxTs,
+              selectedPeriodMonths: effectivePeriodMonths,
             });
             const categoryInfo = getFundCategoryInfo(name, currency, isin, sleeve);
             return {
@@ -6756,6 +6904,8 @@
                     currency,
                     initialInvestment,
                     monthlyContribution,
+                    maxTs: effectivePerfMaxTs,
+                    selectedPeriodMonths: effectivePeriodMonths,
                   })
                 : { p1y: null, p3y: null, p5y: null };
               return {
@@ -6769,7 +6919,7 @@
               };
             }),
           ];
-        }, [activeCatalogFunds, activeIsins, currency, activeMode, initialInvestment, monthlyContribution]);
+        }, [activeCatalogFunds, activeIsins, currency, activeMode, initialInvestment, monthlyContribution, effectivePerfMaxTs, effectivePeriodMonths]);
 
         const categories = useMemo(() => {
           const cats = new Set(allFunds.map((f) => f.mainCategory));
@@ -6864,7 +7014,9 @@
         }, [currency]);
 
         const growthData = useMemo(() => {
-          // Pre-compute real NAV-based series for all funds that have daily return data
+          // Pre-compute real NAV-based series for all funds that have daily return data.
+          // computeVariableRateSeries returns { values, contributed } where contributions
+          // are skipped before the fund's first real non-zero return.
           const realSeries = {};
           compFunds.forEach((f) => {
             const returns = getFundReturnSeriesByIsin(f.isin) || getFundReturnSeries(f.name, currency);
@@ -6894,9 +7046,11 @@
             compFunds.forEach((f) => {
               // Use real NAV-based weekly growth when available
               if (realSeries[f.id]) {
-                const value = realSeries[f.id][index] ?? null;
-                const investedBase = initialInvestment + monthlyContribution * monthsSinceStart;
+                const value = realSeries[f.id].values[index] ?? null;
+                // Use the actual contributed amount from the series (respects fund start date)
+                const investedBase = realSeries[f.id].contributed[index] ?? (initialInvestment + monthlyContribution * monthsSinceStart);
                 row[f.id] = value !== null ? +value.toFixed(2) : null;
+                row[`${f.id}Contributed`] = Number.isFinite(investedBase) ? +investedBase.toFixed(2) : null;
                 row[`${f.id}Pct`] =
                   value !== null && investedBase > 0
                     ? +(((value / investedBase) - 1) * 100).toFixed(2)
@@ -6906,6 +7060,7 @@
               const annualRate = f.p5y ?? f.p3y ?? f.p1y;
               if (annualRate === null || annualRate === undefined) {
                 row[f.id] = null;
+                row[`${f.id}Contributed`] = null;
                 row[`${f.id}Pct`] = null;
                 return;
               }
@@ -6918,6 +7073,7 @@
                     monthlyContribution * ((Math.pow(1 + monthlyRate, monthCount) - 1) / monthlyRate);
               const investedBase = initialInvestment + monthlyContribution * monthCount;
               row[f.id] = +value.toFixed(2);
+              row[`${f.id}Contributed`] = +investedBase.toFixed(2);
               row[`${f.id}Pct`] =
                 investedBase > 0 ? +(((value / investedBase) - 1) * 100).toFixed(2) : null;
             });
@@ -6930,7 +7086,7 @@
         );
         const referenceValue = viewMode === "percent" ? 0 : initialInvestment;
 
-        const displayData = useMemo(() => {
+        const filteredGrowthData = useMemo(() => {
           // Clamp to the common last known date for all selected funds in this comparison.
           const boundedGrowthData = growthData.filter((row) => row.ts >= CHART_MIN_TS && row.ts <= commonMaxTs);
           let filtered;
@@ -6953,14 +7109,18 @@
           } else {
             filtered = boundedGrowthData;
           }
-          return buildStartAnchoredDisplayData(filtered, neniDataKeys, {
+          return filtered;
+        }, [growthData, commonMaxTs, horizonMonths, customDateFrom, customDateTo]);
+
+        const displayData = useMemo(() => {
+          return buildStartAnchoredDisplayData(filteredGrowthData, neniDataKeys, {
             mode: viewMode,
             referenceValue,
             anchorOverrides: {
               referenceValue,
             },
           });
-        }, [growthData, commonMaxTs, horizonMonths, customDateFrom, customDateTo, neniDataKeys, viewMode, referenceValue]);
+        }, [filteredGrowthData, neniDataKeys, viewMode, referenceValue]);
 
         const xTicks = useMemo(() => {
           const seen = new Set();
@@ -6974,6 +7134,31 @@
         }, [displayData]
         );
         const finalRow = displayData.length ? displayData[displayData.length - 1] : null;
+        const fundPeriodChangeMap = useMemo(() => {
+          if (!filteredGrowthData.length) return {};
+          const periodFirstRow = filteredGrowthData[0];
+          const periodLastRow = filteredGrowthData[filteredGrowthData.length - 1];
+          return Object.fromEntries(
+            compFunds.map((fund) => {
+              const key = fund.id;
+              const periodStartPortfolio = Number(periodFirstRow?.[key]);
+              const periodEndPortfolio = Number(periodLastRow?.[key]);
+              const periodStartContributed = Number(periodFirstRow?.[`${key}Contributed`]);
+              const periodEndContributed = Number(periodLastRow?.[`${key}Contributed`]);
+              if (
+                !Number.isFinite(periodStartPortfolio) ||
+                !Number.isFinite(periodEndPortfolio) ||
+                !Number.isFinite(periodStartContributed) ||
+                !Number.isFinite(periodEndContributed)
+              ) {
+                return [key, null];
+              }
+              const periodBase = periodStartPortfolio + (periodEndContributed - periodStartContributed);
+              const totalChange = periodBase > 0 ? ((periodEndPortfolio - periodBase) / periodBase) * 100 : 0;
+              return [key, totalChange];
+            })
+          );
+        }, [filteredGrowthData, compFunds]);
         const chartLabelValue = viewMode === "percent" ? "Konečná výkonnost" : "Konečná hodnota";
         const neniYAxis = useMemo(
           () =>
@@ -7375,6 +7560,7 @@
                       {compFunds.map((f, idx) => {
                         const valueKey = f.id;
                         const finalValue = finalRow ? finalRow[valueKey] : null;
+                        const totalChange = fundPeriodChangeMap[valueKey];
                         return (
                           <div key={f.id} className="relative rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <button type="button" onClick={() => toggleFund(f.id)} className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" aria-label={`Odebrat ${f.name} z porovnání`} title="Odebrat fond z porovnání">×</button>
@@ -7390,6 +7576,11 @@
                                 ? `${finalValue >= 0 ? "+" : ""}${Number(finalValue).toFixed(2)} %`
                                 : formatMoney(finalValue)}
                             </div>
+                            {viewMode === "value" && Number.isFinite(totalChange) && (
+                              <div className={"text-xs font-semibold tabular-nums " + (totalChange >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                {totalChange >= 0 ? "▲" : "▼"} {Number(totalChange).toFixed(2)} % proti vloženým prostředkům
+                              </div>
+                            )}
                             <div className="text-[10px] uppercase tracking-widest text-slate-400">{chartLabelValue}</div>
                           </div>
                         );
@@ -7538,7 +7729,7 @@
               </div>
 
               <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Invest Tools — Demo · Výkonnosti vycházejí z přibližných historických dat. Nejedná se o investiční doporučení.
+                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
               </footer>
             </main>
           </div>
