@@ -1326,7 +1326,7 @@
         "hasWeeklyIsin": true,
         "hasDailyByName": false,
         "hasPerfExact": false,
-        "hasClassification": false,
+        "hasClassification": true,
         "hasInception": false
       }
     ],
@@ -1463,7 +1463,7 @@
         "hasWeeklyIsin": true,
         "hasDailyByName": false,
         "hasPerfExact": true,
-        "hasClassification": false,
+        "hasClassification": true,
         "hasInception": false
       },
       {
@@ -2080,9 +2080,7 @@
         "Akciový MIX",
         "Erste Stock Value"
       ],
-      "missingClassification": [
-        "Erste Stock Value"
-      ],
+      "missingClassification": [],
       "withDailyByName": [
         "Sporoinvest",
         "Sporobond",
@@ -2129,9 +2127,7 @@
         "Templeton Emerging Markets Fund",
         "Templeton Global High Yield Fund"
       ],
-      "missingClassification": [
-        "Templeton Global Bond Fund"
-      ],
+      "missingClassification": [],
       "withDailyByName": [],
       "withInception": []
     },
@@ -2218,11 +2214,6 @@
   "presetMismatches": {
     "preset": [
       {
-        "portfolio": "RŘC1",
-        "currency": "CZK",
-        "fund": "Fidelity Global Dividend"
-      },
-      {
         "portfolio": "RŘC2",
         "currency": "CZK",
         "fund": "Fidelity Global Dividend"
@@ -2242,104 +2233,22 @@
   },
   "lengths": {
     "dailyDates": 1227,
-    "weeklyDates": 140,
+    "weeklyDates": 270,
     "fundDailyUniqueLengths": [
       1226
     ],
     "weeklyHistUniqueLengths": [
-      139
+      269
     ],
     "weeklyIsinUniqueLengths": [
-      209,
-      260
+      269
     ],
     "weeklyNameUniqueLengths": []
   },
   "lengthOutliers": {
     "fundDaily": [],
     "weeklyHist": [],
-    "weeklyIsin": [
-      {
-        "isin": "CZ0008472271",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008472263",
-        "length": 209
-      },
-      {
-        "isin": "LU0082087437",
-        "length": 209
-      },
-      {
-        "isin": "LU0768356593",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008472230",
-        "length": 209
-      },
-      {
-        "isin": "LU1022391483",
-        "length": 209
-      },
-      {
-        "isin": "LU1692483032",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008472412",
-        "length": 209
-      },
-      {
-        "isin": "LU1114574418",
-        "length": 209
-      },
-      {
-        "isin": "LU0979393146",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008472297",
-        "length": 209
-      },
-      {
-        "isin": "AT0000A1E119",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008472545",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008476280",
-        "length": 209
-      },
-      {
-        "isin": "LU0823394423",
-        "length": 209
-      },
-      {
-        "isin": "LU0629872945",
-        "length": 209
-      },
-      {
-        "isin": "LU2020654062",
-        "length": 209
-      },
-      {
-        "isin": "LU2155808657",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008472404",
-        "length": 209
-      },
-      {
-        "isin": "CZ0008475043",
-        "length": 209
-      }
-    ],
+    "weeklyIsin": [],
     "weeklyName": []
   },
   "dailyAnomalies": [
@@ -2358,532 +2267,20 @@
   ],
   "trailingZeroSeries": [
     {
-      "isin": "CZ0008472271",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472263",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0082087437",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0768356593",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472230",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1022391483",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1692483032",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472412",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1114574418",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0979393146",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472297",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A1E119",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472545",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008476280",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823394423",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0629872945",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2020654062",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2155808657",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472404",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008475043",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A1AW14",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1400167216",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0979392924",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1542713687",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2484078758",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "IE000YC7FPB6",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0405489047",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000639463",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0979392767",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0405488825",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823434310",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "CZ0008472289",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A2QP89",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0082087353",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823401228",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2451817873",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0768356080",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1213835512",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU3215558704",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0768356247",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A10QN3",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A0XYP0",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A3N017",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1789409619",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2033393641",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1641601064",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2898087106",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A044X2",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1458425730",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0295015134",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2739071228",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A2STH3",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1165135440",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0119216553",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823434237",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2250351991",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823401574",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A0A1P0",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0605515377",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1548497699",
-      "trailingZeros": 70
-    },
-    {
       "isin": "LU0261950553",
-      "trailingZeros": 71
-    },
-    {
-      "isin": "IE000YUTMIU2",
-      "trailingZeros": 70
+      "trailingZeros": 1
     },
     {
       "isin": "LU0882574998",
-      "trailingZeros": 71
-    },
-    {
-      "isin": "LU0111549050",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823394852",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0131210360",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0152980495",
-      "trailingZeros": 70
+      "trailingZeros": 1
     },
     {
       "isin": "LU0093669546",
-      "trailingZeros": 71
-    },
-    {
-      "isin": "LU0251130638",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2020654575",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2020653924",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000673215",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000673280",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0496369546",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0083138064",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A0C8W9",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0111491469",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823388615",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823417810",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A03N37",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000673199",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000673165",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000673181",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A00GK1",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000494893",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1097728288",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0370787193",
-      "trailingZeros": 70
+      "trailingZeros": 1
     },
     {
       "isin": "LU0131126574",
-      "trailingZeros": 71
-    },
-    {
-      "isin": "LU0523919115",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0140363002",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0546917773",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0546916619",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0146257711",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0546918664",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0768355603",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0626262082",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0294219869",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0300743944",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000A07YK9",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1548497426",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1620156130",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823434583",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0823421333",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "AT0000673371",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0082087940",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0109392836",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0109391861",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0772969993",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1711970159",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0261946288",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0282388437",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU2020653767",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0543330301",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0128526901",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0012186622",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0089276934",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0012182399",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0900495697",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0238205958",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0261950470",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0740037022",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0261947682",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0605520377",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0131126228",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0390134368",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1458427785",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0478345209",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0128522744",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0252652382",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0300740767",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU0052750758",
-      "trailingZeros": 70
-    },
-    {
-      "isin": "LU1931956285",
-      "trailingZeros": 70
+      "trailingZeros": 1
     }
   ],
   "catalogNoSeriesAtAll": {
@@ -2891,12 +2288,6 @@
     "EUR": [],
     "USD": []
   },
-  "classificationExtra": [
-    "LU0429745879",
-    "LU0429746091"
-  ],
-  "catalogIsinsMissingClassification": [
-    "AT0000A2STH3",
-    "LU0152980495"
-  ]
+  "classificationExtra": [],
+  "catalogIsinsMissingClassification": []
 }
