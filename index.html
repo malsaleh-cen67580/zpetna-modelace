@@ -151,6 +151,16 @@
   <body>
     <div id="boot-loader">ERSTE&nbsp;PREMIER · načítání…</div>
     <div id="root"></div>
+    <script>
+      window.setTimeout(() => {
+        const loader = document.getElementById("boot-loader");
+        if (loader) {
+          loader.textContent = "ERSTE PREMIER · aplikaci se nepodařilo načíst";
+          loader.style.background = "#f6f8fc";
+          loader.style.color = "#0a1e3f";
+        }
+      }, 15000);
+    </script>
 
     <!-- React & ReactDOM 18 (UMD) -->
     <script
