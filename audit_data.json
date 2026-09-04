@@ -2212,23 +2212,7 @@
     ]
   },
   "presetMismatches": {
-    "preset": [
-      {
-        "portfolio": "RŘC2",
-        "currency": "CZK",
-        "fund": "Fidelity Global Dividend"
-      },
-      {
-        "portfolio": "RŘC3",
-        "currency": "CZK",
-        "fund": "Fidelity Global Dividend"
-      },
-      {
-        "portfolio": "RŘC4",
-        "currency": "CZK",
-        "fund": "Fidelity Global Dividend"
-      }
-    ],
+    "preset": [],
     "mma": []
   },
   "lengths": {
