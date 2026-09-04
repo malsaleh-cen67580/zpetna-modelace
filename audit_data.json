@@ -2687,7 +2687,6 @@
       260
     ],
     "weeklyNameUniqueLengths": [
-      200,
       260
     ]
   },
@@ -2695,12 +2694,7 @@
     "fundDaily": [],
     "weeklyHist": [],
     "weeklyIsin": [],
-    "weeklyName": [
-      {
-        "name": "reico čs long lease",
-        "length": 200
-      }
-    ]
+    "weeklyName": []
   },
   "dailyAnomalies": [
     {
