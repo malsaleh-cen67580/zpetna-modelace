@@ -5,531 +5,337 @@
         "name": "Sporoinvest",
         "isin": "CZ0008472271",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Sporobond",
         "isin": "CZ0008472263",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Czech Crown Bond",
         "isin": "LU0082087437",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Global Bond",
         "isin": "LU0768356593",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ČS Korporátní Dluhopisový",
         "isin": "CZ0008472230",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Euro Corporate Bond",
         "isin": "LU1022391483",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Income Fund",
         "isin": "LU1692483032",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "High Yield Dluhopisový",
         "isin": "CZ0008472412",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global High Yield",
         "isin": "LU1114574418",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity European High Yield",
         "isin": "LU0979393146",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Trendbond",
         "isin": "CZ0008472297",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Stock Commodities",
         "isin": "AT0000A1E119",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Reico ČS Nemovitostní",
         "isin": "CZ0008472545",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Reico ČS Long Lease",
         "isin": "CZ0008476280",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Global Convertible",
         "isin": "LU0823394423",
-        "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "sleeve": "Alternativní složka",
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Commodity Enhanced",
         "isin": "LU0629872945",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNPP Flexi I Absolute Return Convertible",
         "isin": "LU2020654062",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNPP Paribas Global Absolute Return",
         "isin": "LU2155808657",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Top Stocks",
         "isin": "CZ0008472404",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Stock Small Caps",
         "isin": "CZ0008475043",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Responsible Stock Global",
         "isin": "AT0000A1AW14",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity World Fund",
         "isin": "LU1400167216",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
-        "name": "Fidelity Global Dividend",
+        "name": "Fidelity Global Dividend Fund",
         "isin": "LU0979392924",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Global Sustainable Equity",
         "isin": "LU1542713687",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Invesco Metaverse And AI Fund",
         "isin": "LU2484078758",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Bluesphere World Equity UCITS ETF Accum Hedged",
         "isin": "IE000YC7FPB6",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Patrimonial Aggressive",
         "isin": "LU0405489047",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Responsible Stock America",
         "isin": "AT0000639463",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity America Fund",
         "isin": "LU0979392767",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs US Enhanced Equity",
         "isin": "LU0405488825",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP US Growth",
         "isin": "LU0823434310",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Sporotrend",
         "isin": "CZ0008472289",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Responsible Stock Europe",
         "isin": "AT0000A2QP89",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Central European Equity",
         "isin": "LU0082087353",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Euro Equity",
         "isin": "LU0823401228",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Nordic Small Cap",
         "isin": "LU2451817873",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Mutual European",
         "isin": "LU0768356080",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Asian Special Situations",
         "isin": "LU1213835512",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNPPF Asia Ex-Japan Equity",
         "isin": "LU3215558704",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Asian Growth",
         "isin": "LU0768356247",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
-      },
-      {
-        "name": "Goldman Sachs Japan Equity",
-        "isin": "LU0429745879",
-        "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Stock EM Global",
         "isin": "AT0000A10QN3",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Stock Biotec",
         "isin": "AT0000A0XYP0",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Security Invest",
         "isin": "AT0000A3N017",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Disruptive Technology",
         "isin": "LU1789409619",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Social Impact Equity",
         "isin": "LU2033393641",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Allianz Artificial Intelligence",
         "isin": "LU1641601064",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Industrials",
         "isin": "LU2898087106",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE WWF Stock Environment",
         "isin": "AT0000A044X2",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
-      },
-      {
-        "name": "Goldman Sachs Global Climate & Environment",
-        "isin": "LU0429746091",
-        "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Aqua",
         "isin": "LU1458425730",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Global Impact Opportunities",
         "isin": "LU0295015134",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Health Care Innovators",
         "isin": "LU2739071228",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
+      },
+      {
+        "name": "Konzervativní MIX",
+        "isin": "CZ0008472321",
+        "sleeve": "Alternativní složka",
+        "missingFields": []
+      },
+      {
+        "name": "Vyvážený MIX",
+        "isin": "CZ0008472339",
+        "sleeve": "Alternativní složka",
+        "missingFields": []
+      },
+      {
+        "name": "Dynamický MIX",
+        "isin": "CZ0008472347",
+        "sleeve": "Alternativní složka",
+        "missingFields": []
+      },
+      {
+        "name": "Akciový MIX",
+        "isin": "CZ0008472305",
+        "sleeve": "Alternativní složka",
+        "missingFields": []
+      },
+      {
+        "name": "Erste Stock Value",
+        "isin": "AT0000A2STH3",
+        "sleeve": "Akciová složka",
+        "missingFields": []
       }
     ],
     "EUR": [
@@ -537,793 +343,483 @@
         "name": "BNP Paribas Funds Aqua",
         "isin": "LU1165135440",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Global Sustainable Equity",
         "isin": "LU0119216553",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds US Growth",
         "isin": "LU0823434237",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Disruptive Technology",
         "isin": "LU2250351991",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Euro Equity",
         "isin": "LU0823401574",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Responsible Stock America",
         "isin": "AT0000A0A1P0",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Dividend",
         "isin": "LU0605515377",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Allianz Global Artificial Intelligence",
         "isin": "LU1548497699",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity European Multi Asset Income Fund",
         "isin": "LU0261950553",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Quality Income",
         "isin": "IE000YUTMIU2",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Fund Global Income",
         "isin": "LU0882574998",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Euro Government Bond",
         "isin": "LU0111549050",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Global Convertible",
         "isin": "LU0823394852",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Euro Corporate Bond",
         "isin": "LU0131210360",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Global Bond Fund",
-        "isin": "LU0294219869",
+        "isin": "LU0152980495",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Euro Government Bond Fund",
         "isin": "LU0093669546",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Euro Bond Fund",
         "isin": "LU0251130638",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Flexi I Abs Return Convertible",
         "isin": "LU2020654575",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNPP Flexi I Flexible Convertible Bond",
         "isin": "LU2020653924",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Portfolio Bond Europe",
         "isin": "AT0000673215",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Bond Europe High Yield",
         "isin": "AT0000673280",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin European Corporate Bond Fund",
         "isin": "LU0496369546",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Euro Money Market",
         "isin": "LU0083138064",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
+      },
+      {
+        "name": "ERSTE Reserve Dollar",
+        "isin": "AT0000A0C8W9",
+        "sleeve": "Úroková složka",
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Europe Dividend",
         "isin": "LU0111491469",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Global High Yield Bond",
         "isin": "LU0823388615",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Global Low Vol Equity",
         "isin": "LU0823417810",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE WWF Stock Environment",
         "isin": "AT0000A03N37",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ESPA Bond Danubia",
         "isin": "AT0000673199",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ESPA Stock Biotec",
         "isin": "AT0000673165",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ESPA Stock Europe-Emerging",
         "isin": "AT0000673181",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ESPA Stock Global-Emerging Markets",
         "isin": "AT0000A00GK1",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ESPA Stock Istanbul",
         "isin": "AT0000494893",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - Emerging Markets Fund",
         "isin": "LU1097728288",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - Euro Corporate Bond Fund",
         "isin": "LU0370787193",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Euro High Yield Fund",
         "isin": "LU0131126574",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Global Real Estate Fund",
         "isin": "LU0523919115",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Mutual European Fund",
         "isin": "LU0140363002",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Euro Fixed Income",
         "isin": "LU0546917773",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Euromix Bond",
         "isin": "LU0546916619",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Global Equity",
         "isin": "LU0146257711",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs Global High Yield P Hedged",
         "isin": "LU0546918664",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Emerging Markets Bond Fund",
         "isin": "LU0768355603",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Emerging Markets Fund",
         "isin": "LU0626262082",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
+      },
+      {
+        "name": "Templeton Global Bond Fund",
+        "isin": "LU0294219869",
+        "sleeve": "Úroková složka",
+        "missingFields": []
       },
       {
         "name": "Templeton Global High Yield Fund",
         "isin": "LU0300743944",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Stock Real Estate",
         "isin": "AT0000A07YK9",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       }
     ],
     "USD": [
       {
-        "name": "ERSTE Reserve Dollar",
-        "isin": "AT0000A0C8W9",
-        "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
-      },
-      {
         "name": "Allianz Artificial Intelligence",
         "isin": "LU1548497426",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Aqua",
         "isin": "LU1620156130",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP US Growth",
         "isin": "LU0823434583",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Disruptive Technology",
         "isin": "LU0823421333",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "ERSTE Responsible Stock America",
         "isin": "AT0000673371",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Goldman Sachs US Enhanced Equity",
         "isin": "LU0082087940",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Technology",
         "isin": "LU0109392836",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin U.s Oportunities",
         "isin": "LU0109391861",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Dividend",
         "isin": "LU0772969993",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Financial Services",
         "isin": "LU1711970159",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Global Bond",
         "isin": "LU0261946288",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Sustainable Global Corporate Bond",
         "isin": "LU0282388437",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNPP Flexi I Flexible Convertible Bond",
         "isin": "LU2020653767",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin U.s. Government Fund",
         "isin": "LU0543330301",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin U.s. Dollar Short-Term Money Market",
         "isin": "LU0128526901",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Usd Money Market",
         "isin": "LU0012186622",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Emerging Bond",
         "isin": "LU0089276934",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds US Short Duration Bond",
         "isin": "LU0012182399",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - Emerging Market Corporate Debt Fund",
         "isin": "LU0900495697",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - Emerging Market Debt Fund",
         "isin": "LU0238205958",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - Emerging Markets Fund",
         "isin": "LU0261950470",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - Global High Yield Fund",
         "isin": "LU0740037022",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - US Dollar Bond Fund",
         "isin": "LU0261947682",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Fidelity Funds - US High Yield Fund",
         "isin": "LU0605520377",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin High Yield Fund",
         "isin": "LU0131126228",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Franklin Sustainable Global Growth Fund",
         "isin": "LU0390134368",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNP Paribas Funds Responsible US Value Multi-Factor Equity",
         "isin": "LU1458427785",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Emerging Markets Bond Fund",
         "isin": "LU0478345209",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Emerging Markets Fund",
         "isin": "LU0128522744",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Global Bond Fund",
         "isin": "LU0252652382",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton Global High Yield Fund",
         "isin": "LU0300740767",
         "sleeve": "Úroková složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "Templeton China Fund",
         "isin": "LU0052750758",
         "sleeve": "Akciová složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       },
       {
         "name": "BNPP Flexi I Commodities",
         "isin": "LU1931956285",
         "sleeve": "Alternativní složka",
-        "missingFields": [
-          "currency",
-          "class",
-          "subclass"
-        ]
+        "missingFields": []
       }
     ]
   },
@@ -1528,11 +1024,11 @@
         "hasInception": false
       },
       {
-        "name": "Fidelity Global Dividend",
+        "name": "Fidelity Global Dividend Fund",
         "isin": "LU0979392924",
         "hasWeeklyIsin": true,
         "hasDailyByName": false,
-        "hasPerfExact": true,
+        "hasPerfExact": false,
         "hasClassification": true,
         "hasInception": false
       },
@@ -1690,15 +1186,6 @@
         "hasInception": false
       },
       {
-        "name": "Goldman Sachs Japan Equity",
-        "isin": "LU0429745879",
-        "hasWeeklyIsin": true,
-        "hasDailyByName": false,
-        "hasPerfExact": true,
-        "hasClassification": true,
-        "hasInception": false
-      },
-      {
         "name": "ERSTE Stock EM Global",
         "isin": "AT0000A10QN3",
         "hasWeeklyIsin": true,
@@ -1771,15 +1258,6 @@
         "hasInception": false
       },
       {
-        "name": "Goldman Sachs Global Climate & Environment",
-        "isin": "LU0429746091",
-        "hasWeeklyIsin": true,
-        "hasDailyByName": false,
-        "hasPerfExact": true,
-        "hasClassification": true,
-        "hasInception": false
-      },
-      {
         "name": "BNP Aqua",
         "isin": "LU1458425730",
         "hasWeeklyIsin": true,
@@ -1805,6 +1283,51 @@
         "hasPerfExact": true,
         "hasClassification": true,
         "hasInception": true
+      },
+      {
+        "name": "Konzervativní MIX",
+        "isin": "CZ0008472321",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": false,
+        "hasClassification": true,
+        "hasInception": false
+      },
+      {
+        "name": "Vyvážený MIX",
+        "isin": "CZ0008472339",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": false,
+        "hasClassification": true,
+        "hasInception": false
+      },
+      {
+        "name": "Dynamický MIX",
+        "isin": "CZ0008472347",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": false,
+        "hasClassification": true,
+        "hasInception": false
+      },
+      {
+        "name": "Akciový MIX",
+        "isin": "CZ0008472305",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": false,
+        "hasClassification": true,
+        "hasInception": false
+      },
+      {
+        "name": "Erste Stock Value",
+        "isin": "AT0000A2STH3",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": false,
+        "hasClassification": false,
+        "hasInception": false
       }
     ],
     "EUR": [
@@ -1936,11 +1459,11 @@
       },
       {
         "name": "Templeton Global Bond Fund",
-        "isin": "LU0294219869",
+        "isin": "LU0152980495",
         "hasWeeklyIsin": true,
         "hasDailyByName": false,
         "hasPerfExact": true,
-        "hasClassification": true,
+        "hasClassification": false,
         "hasInception": false
       },
       {
@@ -2012,6 +1535,15 @@
         "hasWeeklyIsin": true,
         "hasDailyByName": false,
         "hasPerfExact": true,
+        "hasClassification": true,
+        "hasInception": false
+      },
+      {
+        "name": "ERSTE Reserve Dollar",
+        "isin": "AT0000A0C8W9",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": false,
         "hasClassification": true,
         "hasInception": false
       },
@@ -2196,6 +1728,15 @@
         "hasInception": false
       },
       {
+        "name": "Templeton Global Bond Fund",
+        "isin": "LU0294219869",
+        "hasWeeklyIsin": true,
+        "hasDailyByName": false,
+        "hasPerfExact": true,
+        "hasClassification": true,
+        "hasInception": false
+      },
+      {
         "name": "Templeton Global High Yield Fund",
         "isin": "LU0300743944",
         "hasWeeklyIsin": true,
@@ -2215,15 +1756,6 @@
       }
     ],
     "USD": [
-      {
-        "name": "ERSTE Reserve Dollar",
-        "isin": "AT0000A0C8W9",
-        "hasWeeklyIsin": true,
-        "hasDailyByName": false,
-        "hasPerfExact": false,
-        "hasClassification": true,
-        "hasInception": false
-      },
       {
         "name": "Allianz Artificial Intelligence",
         "isin": "LU1548497426",
@@ -2532,6 +2064,7 @@
         "ERSTE Stock Commodities",
         "Reico ČS Long Lease",
         "ERSTE Responsible Stock Global",
+        "Fidelity Global Dividend Fund",
         "Invesco Metaverse And AI Fund",
         "Bluesphere World Equity UCITS ETF Accum Hedged",
         "ERSTE Responsible Stock America",
@@ -2540,9 +2073,16 @@
         "ERSTE Stock EM Global",
         "ERSTE Stock Biotec",
         "ERSTE Security Invest",
-        "ERSTE WWF Stock Environment"
+        "ERSTE WWF Stock Environment",
+        "Konzervativní MIX",
+        "Vyvážený MIX",
+        "Dynamický MIX",
+        "Akciový MIX",
+        "Erste Stock Value"
       ],
-      "missingClassification": [],
+      "missingClassification": [
+        "Erste Stock Value"
+      ],
       "withDailyByName": [
         "Sporoinvest",
         "Sporobond",
@@ -2567,6 +2107,7 @@
         "BNP Paribas Flexi I Abs Return Convertible",
         "ERSTE Portfolio Bond Europe",
         "ERSTE Bond Europe High Yield",
+        "ERSTE Reserve Dollar",
         "BNP Paribas Funds Europe Dividend",
         "BNP Paribas Funds Global High Yield Bond",
         "BNP Paribas Funds Global Low Vol Equity",
@@ -2588,14 +2129,15 @@
         "Templeton Emerging Markets Fund",
         "Templeton Global High Yield Fund"
       ],
-      "missingClassification": [],
+      "missingClassification": [
+        "Templeton Global Bond Fund"
+      ],
       "withDailyByName": [],
       "withInception": []
     },
     "USD": {
       "missingWeeklyIsin": [],
       "missingPerfExact": [
-        "ERSTE Reserve Dollar",
         "ERSTE Responsible Stock America",
         "Franklin U.s Oportunities",
         "Sustainable Global Corporate Bond",
@@ -2633,15 +2175,18 @@
       "BNPP Flexi I Commodities",
       "Reico ČS Long lease",
       "Erste Responsible Stock Global",
+      "Fidelity Global Dividend",
       "Invesco Metaverse and AI Fund",
       "BlueSphere World Equity UCITS ETF Accum Hedged",
       "Erste Responsible Stock America",
       "Erste Responsible Stock Europe",
       "BNPPF Asia ex-Japan Equity",
+      "Goldman Sachs Japan Equity",
       "Erste Stock EM Global VT",
       "Erste Stock Biotec",
       "Erste Security Invest",
-      "Erste WWF Stock Environment"
+      "Erste WWF Stock Environment",
+      "Goldman Sachs Global Climate & Environment"
     ],
     "EUR": [
       "ERSTE Responsible Stock America VT",
@@ -2671,29 +2216,130 @@
     ]
   },
   "presetMismatches": {
-    "preset": [],
+    "preset": [
+      {
+        "portfolio": "RŘC1",
+        "currency": "CZK",
+        "fund": "Fidelity Global Dividend"
+      },
+      {
+        "portfolio": "RŘC2",
+        "currency": "CZK",
+        "fund": "Fidelity Global Dividend"
+      },
+      {
+        "portfolio": "RŘC3",
+        "currency": "CZK",
+        "fund": "Fidelity Global Dividend"
+      },
+      {
+        "portfolio": "RŘC4",
+        "currency": "CZK",
+        "fund": "Fidelity Global Dividend"
+      }
+    ],
     "mma": []
   },
   "lengths": {
     "dailyDates": 1227,
-    "weeklyDates": 261,
+    "weeklyDates": 140,
     "fundDailyUniqueLengths": [
       1226
     ],
     "weeklyHistUniqueLengths": [
-      260
+      139
     ],
     "weeklyIsinUniqueLengths": [
+      209,
       260
     ],
-    "weeklyNameUniqueLengths": [
-      260
-    ]
+    "weeklyNameUniqueLengths": []
   },
   "lengthOutliers": {
     "fundDaily": [],
     "weeklyHist": [],
-    "weeklyIsin": [],
+    "weeklyIsin": [
+      {
+        "isin": "CZ0008472271",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008472263",
+        "length": 209
+      },
+      {
+        "isin": "LU0082087437",
+        "length": 209
+      },
+      {
+        "isin": "LU0768356593",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008472230",
+        "length": 209
+      },
+      {
+        "isin": "LU1022391483",
+        "length": 209
+      },
+      {
+        "isin": "LU1692483032",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008472412",
+        "length": 209
+      },
+      {
+        "isin": "LU1114574418",
+        "length": 209
+      },
+      {
+        "isin": "LU0979393146",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008472297",
+        "length": 209
+      },
+      {
+        "isin": "AT0000A1E119",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008472545",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008476280",
+        "length": 209
+      },
+      {
+        "isin": "LU0823394423",
+        "length": 209
+      },
+      {
+        "isin": "LU0629872945",
+        "length": 209
+      },
+      {
+        "isin": "LU2020654062",
+        "length": 209
+      },
+      {
+        "isin": "LU2155808657",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008472404",
+        "length": 209
+      },
+      {
+        "isin": "CZ0008475043",
+        "length": 209
+      }
+    ],
     "weeklyName": []
   },
   "dailyAnomalies": [
@@ -2712,12 +2358,532 @@
   ],
   "trailingZeroSeries": [
     {
-      "isin": "LU0900495697",
-      "trailingZeros": 1
+      "isin": "CZ0008472271",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472263",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0082087437",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0768356593",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472230",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1022391483",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1692483032",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472412",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1114574418",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0979393146",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472297",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A1E119",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472545",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008476280",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823394423",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0629872945",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2020654062",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2155808657",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472404",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008475043",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A1AW14",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1400167216",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0979392924",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1542713687",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2484078758",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "IE000YC7FPB6",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0405489047",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000639463",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0979392767",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0405488825",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823434310",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "CZ0008472289",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A2QP89",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0082087353",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823401228",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2451817873",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0768356080",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1213835512",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU3215558704",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0768356247",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A10QN3",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A0XYP0",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A3N017",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1789409619",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2033393641",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1641601064",
+      "trailingZeros": 70
     },
     {
       "isin": "LU2898087106",
-      "trailingZeros": 1
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A044X2",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1458425730",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0295015134",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2739071228",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A2STH3",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1165135440",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0119216553",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823434237",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2250351991",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823401574",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A0A1P0",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0605515377",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1548497699",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0261950553",
+      "trailingZeros": 71
+    },
+    {
+      "isin": "IE000YUTMIU2",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0882574998",
+      "trailingZeros": 71
+    },
+    {
+      "isin": "LU0111549050",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823394852",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0131210360",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0152980495",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0093669546",
+      "trailingZeros": 71
+    },
+    {
+      "isin": "LU0251130638",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2020654575",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2020653924",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000673215",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000673280",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0496369546",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0083138064",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A0C8W9",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0111491469",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823388615",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823417810",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A03N37",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000673199",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000673165",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000673181",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A00GK1",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000494893",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1097728288",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0370787193",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0131126574",
+      "trailingZeros": 71
+    },
+    {
+      "isin": "LU0523919115",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0140363002",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0546917773",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0546916619",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0146257711",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0546918664",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0768355603",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0626262082",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0294219869",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0300743944",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000A07YK9",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1548497426",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1620156130",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823434583",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0823421333",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "AT0000673371",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0082087940",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0109392836",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0109391861",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0772969993",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1711970159",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0261946288",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0282388437",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU2020653767",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0543330301",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0128526901",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0012186622",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0089276934",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0012182399",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0900495697",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0238205958",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0261950470",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0740037022",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0261947682",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0605520377",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0131126228",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0390134368",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1458427785",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0478345209",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0128522744",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0252652382",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0300740767",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU0052750758",
+      "trailingZeros": 70
+    },
+    {
+      "isin": "LU1931956285",
+      "trailingZeros": 70
     }
   ],
   "catalogNoSeriesAtAll": {
@@ -2726,10 +2892,11 @@
     "USD": []
   },
   "classificationExtra": [
-    "CZ0008472305",
-    "CZ0008472321",
-    "CZ0008472339",
-    "CZ0008472347"
+    "LU0429745879",
+    "LU0429746091"
   ],
-  "catalogIsinsMissingClassification": []
+  "catalogIsinsMissingClassification": [
+    "AT0000A2STH3",
+    "LU0152980495"
+  ]
 }
