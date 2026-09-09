@@ -5070,6 +5070,17 @@
         );
       }
 
+      const APP_DISCLAIMER_TEXT = "Pouze pro interní účely. Modelace vychází z historických dat; produkty mohou mít odlišnou rizikovost, doporučený investiční horizont a náklady. Minulá výkonnost nezaručuje budoucí výsledky a náklady na pořízení produktu nejsou zahrnuty.";
+
+      function ChartDisclaimer({ className = "" }) {
+        return (
+          <div className={"mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-[11px] leading-relaxed text-slate-600 " + className}>
+            <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">i</span>
+            <p>{APP_DISCLAIMER_TEXT}</p>
+          </div>
+        );
+      }
+
       function PerformanceChart({
         allocation,
         funds = null,
@@ -5488,6 +5499,7 @@
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            <ChartDisclaimer />
             {!showSimulation && (
               <p className="mt-3 text-center text-sm text-slate-500">
                 Pro zobrazení simulace výkonnosti zadejte jednorázovou nebo pravidelnou investici výše.
@@ -6510,9 +6522,6 @@
                 )}
               </div>
 
-              <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
-              </footer>
             </main>
           </div>
         );
@@ -6782,9 +6791,6 @@
                 </button>
               </div>
 
-              <p className="mt-12 text-center text-[11px] text-white/35 tracking-wide">
-                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
-              </p>
             </div>
           </div>
         );
@@ -7689,6 +7695,7 @@
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
+                    <ChartDisclaimer />
 
                     {/* Summary stats for selected funds */}
                     <div className="mt-5 overflow-x-auto">
@@ -7728,9 +7735,6 @@
                 )}
               </div>
 
-              <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
-                © {new Date().getFullYear()} Invest Tools — Demo. Pouze pro interní účely, aplikaci nezobrazovat klientům! Modelace na základě historických dat. Zvolené investiční produkty mohou mít odlišné parametry (rizikovost, doporučený investiční horizont, náklady). Při srovnání jejich výkonnosti na to pamatujte. Minulá výkonnost nezaručuje stejnou výkonnost v budoucím období. Náklady na pořízení produktu nejsou zahrnuty.
-              </footer>
             </main>
           </div>
         );
